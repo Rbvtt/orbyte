@@ -14,8 +14,8 @@ El código de la aplicación se incorporará en la carpeta `src/` durante la con
 ## Documentación
 
 - [Constitución del proyecto](docs/spec/constitucion.md)
-- [Especificación de comportamientos](docs/spec/comportamientos.md) - pendiente de la sesión 9.
-- [Plan técnico](docs/spec/plan-tecnico.md) - pendiente de la sesión 9.
+- [Especificación de comportamientos](docs/spec/comportamientos.md)
+- [Plan técnico](docs/spec/plan-tecnico.md)
 - [Decisiones de arquitectura](docs/decisiones/) - se registrarán como ADR cuando se tome una decisión técnica de fondo.
 
 ## Uso de asistentes de IA
