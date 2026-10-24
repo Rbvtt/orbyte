@@ -1,0 +1,290 @@
+.cabecera {
+  flex-wrap: wrap;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.filtros {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  min-width: 0;
+}
+
+.filtro {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--muted);
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.filtro:hover {
+  color: var(--text);
+}
+
+.filtro[aria-selected="true"] {
+  background: var(--active);
+  color: var(--text);
+}
+
+.cuenta {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.frescura {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 12px 20px;
+  background: var(--negative-bg);
+  color: #7a1a12;
+  border-bottom: 1px solid #f4c7c3;
+}
+
+.error p {
+  margin: 0;
+}
+
+.vacio {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  padding: 28px 20px;
+  color: var(--muted);
+}
+
+.vacio p {
+  margin: 0;
+}
+
+.marcoTabla {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.tabla {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tabla th {
+  height: 40px;
+  padding: 0 12px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.tabla th:first-child,
+.tabla td:first-child {
+  padding-left: 20px;
+}
+
+.tabla th:last-child,
+.tabla td:last-child {
+  padding-right: 20px;
+}
+
+.tabla td {
+  padding: 12px;
+  vertical-align: top;
+  border-bottom: 1px solid var(--rule);
+  line-height: 20px;
+}
+
+.tabla tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* Los pendientes se distinguen por la etiqueta y por una marca a la izquierda (no solo color). */
+.pendiente td:first-child {
+  box-shadow: inset 3px 0 0 var(--pendiente-border);
+}
+
+.identidad {
+  width: 26%;
+  min-width: 200px;
+}
+
+.alimento {
+  display: block;
+  font-weight: 600;
+}
+
+.sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--muted);
+}
+
+.derecha {
+  text-align: right;
+}
+
+.hora {
+  white-space: nowrap;
+}
+
+.diaTexto {
+  color: var(--muted);
+}
+
+.urgente {
+  color: var(--urgente);
+  font-weight: 600;
+}
+
+.vacioCelda {
+  color: var(--faint);
+}
+
+.estado,
+.accion {
+  white-space: nowrap;
+}
+
+.accion {
+  text-align: right;
+  width: 1%;
+}
+
+.acciones {
+  display: inline-flex;
+  gap: 8px;
+}
+
+/* Teléfono: cada rescate es una tarjeta de dos líneas; ningún dato se pierde. */
+@media (max-width: 760px) {
+  .cabecera {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .frescura {
+    width: 100%;
+    justify-content: space-between;
+    margin-left: 0;
+  }
+
+  .tabla thead {
+    display: none;
+  }
+
+  .tabla,
+  .tabla tbody {
+    display: block;
+  }
+
+  .tabla tr {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "identidad hora"
+      "comercio comercio"
+      "destino destino"
+      "voluntario voluntario"
+      "estado accion";
+    gap: 2px 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .tabla tbody tr:last-child {
+    border-bottom: 0;
+  }
+
+  .tabla td,
+  .tabla td:first-child,
+  .tabla td:last-child {
+    padding: 0;
+    border: 0;
+    min-width: 0;
+    width: auto;
+  }
+
+  .pendiente {
+    box-shadow: inset 3px 0 0 var(--pendiente-border);
+  }
+
+  .pendiente td:first-child {
+    box-shadow: none;
+  }
+
+  .identidad {
+    grid-area: identidad;
+  }
+
+  .hora {
+    grid-area: hora;
+  }
+
+  .comercio {
+    grid-area: comercio;
+    margin-top: 6px;
+  }
+
+  .destino {
+    grid-area: destino;
+  }
+
+  .voluntario {
+    grid-area: voluntario;
+  }
+
+  .comercio,
+  .destino,
+  .voluntario {
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .celdaVacia {
+    display: none;
+  }
+
+  .comercio::before {
+    content: "Comercio: ";
+  }
+
+  .destino::before {
+    content: "Destino: ";
+  }
+
+  .voluntario::before {
+    content: "Voluntario: ";
+  }
+
+  .estado {
+    grid-area: estado;
+    margin-top: 8px;
+    align-self: center;
+  }
+
+  .accion {
+    grid-area: accion;
+    margin-top: 8px;
+  }
+}
