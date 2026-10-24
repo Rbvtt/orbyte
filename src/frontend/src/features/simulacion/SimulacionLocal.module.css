@@ -1,0 +1,38 @@
+.panel {
+  margin-bottom: 24px;
+  padding: 12px 16px;
+  border: 1px dashed var(--notice-border);
+  border-radius: var(--radius-card);
+  background: var(--notice-bg);
+  color: var(--notice-ink);
+  display: grid;
+  gap: 8px;
+}
+
+.titulo {
+  margin: 0;
+  font-size: var(--fs-small);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.fila {
+  display: grid;
+  gap: 4px;
+  font-size: var(--fs-body);
+  color: var(--text);
+}
+
+.rescates {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+  font-size: var(--fs-body);
+}
+
+.rescates a {
+  color: var(--text);
+}

@@ -67,3 +67,38 @@ export interface ErrorConflicto {
   estado_actual: string;
   voluntario_actual: string | null;
 }
+
+/* ── Contratos de issues posteriores (#12, #44, #45, #52, #21) ─────────────────────────────
+ * Se definieron desde las issues porque sus APIs aún no existen. Al integrar cada API,
+ * confirmar los nombres con su esquema real.                                               */
+
+export type Rol = "fundacion" | "voluntario" | "organizacion" | "comercio";
+
+/** Usuario con sesión. TODO(#40): confirmar con la respuesta de GET /api/v1/auth/me. */
+export interface UsuarioActual {
+  id: string;
+  nombre: string;
+  rol: Rol;
+  organizacion_id: string | null;
+  comercio_id: string | null;
+}
+
+/** Detalle con lo que necesitan las acciones de seguimiento.
+ *  TODO(#37, #44): confirmar que GET /api/v1/rescates/{id} incluya `recogido_en` y `motivo_no_completado`. */
+export interface RescateSeguimiento extends RescateDetalle {
+  recogido_en?: string | null;
+  motivo_no_completado?: string | null;
+}
+
+/** Totales de un periodo (CA-05.1). TODO(#51): confirmar con la respuesta de GET /api/v1/impacto. */
+export interface Impacto {
+  /** Fechas YYYY-MM-DD, incluidas las dos. */
+  desde: string;
+  hasta: string;
+  /** Decimal serializado como texto, p. ej. "35.0" */
+  kg_rescatados: string;
+  personas_beneficiadas: number;
+  organizaciones_receptoras: number;
+}
+
+export type TotalImpacto = "kg" | "personas" | "organizaciones";

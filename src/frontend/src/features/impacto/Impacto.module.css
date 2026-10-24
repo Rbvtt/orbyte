@@ -1,0 +1,75 @@
+.periodo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.fecha {
+  display: grid;
+  gap: 4px;
+  font-weight: 500;
+}
+
+.errorForm {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.rango {
+  margin: 0 0 12px;
+  color: var(--muted);
+}
+
+.totales {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.total {
+  display: grid;
+  gap: 6px;
+  height: 100%;
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.enlace:hover {
+  border-color: var(--control);
+}
+
+.etiqueta {
+  color: var(--muted);
+}
+
+.valor {
+  font-size: 36px;
+  line-height: 40px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.verDetalle {
+  font-size: var(--fs-small);
+  color: var(--muted);
+  text-decoration: underline;
+}
+
+@media (max-width: 720px) {
+  .totales {
+    grid-template-columns: 1fr;
+  }
+
+  .fecha {
+    flex: 1 1 140px;
+  }
+}
