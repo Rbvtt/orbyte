@@ -29,6 +29,18 @@ uvicorn app.main:app --reload
 
 La API queda en `http://localhost:8000` y `GET /health` responde `{"status": "ok"}`.
 
+### Base de datos y migraciones
+
+Las migraciones usan Alembic y están en `src/backend/migrations/versions/`. Toman la base de `DATABASE_URL`. Desde `src/backend`, con el entorno virtual activo:
+
+```bash
+alembic upgrade head      # aplica todas las migraciones
+alembic downgrade -1      # revierte la última
+alembic current           # muestra la versión aplicada
+```
+
+Para crear una migración nueva: `alembic revision -m "descripcion"`. Se escribe a mano con `op.execute()` y siempre se completan `upgrade()` y `downgrade()`.
+
 ## Documentación
 
 - [Constitución del proyecto](docs/spec/constitucion.md)
