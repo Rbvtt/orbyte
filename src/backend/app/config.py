@@ -20,6 +20,14 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:5173"
 
     @property
+    def sqlalchemy_database_url(self) -> str:
+        # Render entrega postgresql:// (o postgres://); SQLAlchemy necesita el driver explícito.
+        for prefijo in ("postgresql://", "postgres://"):
+            if self.database_url.startswith(prefijo):
+                return "postgresql+psycopg://" + self.database_url[len(prefijo):]
+        return self.database_url
+
+    @property
     def cors_origins_list(self) -> list[str]:
         return [origen.strip() for origen in self.cors_origins.split(",") if origen.strip()]
 
