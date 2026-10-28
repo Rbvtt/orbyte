@@ -21,6 +21,8 @@ bearer_scheme = HTTPBearer(auto_error=False)
 class CurrentUser:
     sub: str
     rol: str
+    usuario_id: Optional[UUID] = None
+    comercio_id: Optional[UUID] = None
 
 
 def _unauthorized() -> HTTPException:
@@ -51,7 +53,12 @@ def get_current_user(
     if usuario is None or not usuario.activo:
         raise _unauthorized()
 
-    return CurrentUser(sub=sub, rol=usuario.rol.value)
+    return CurrentUser(
+        sub=sub,
+        rol=usuario.rol.value,
+        usuario_id=usuario.id,
+        comercio_id=getattr(usuario, "comercio_id", None),
+    )
 
 
 def require_role(*roles: str):

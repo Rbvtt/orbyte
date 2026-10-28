@@ -56,6 +56,39 @@ Un `401` significa que falta el token, es inválido, expiró o las credenciales 
 
 `JWT_SECRET` es el secreto usado para firmar los tokens y no debe estar vacío ni publicarse. `JWT_EXPIRES_MIN` define su duración en minutos.
 
+### Registro de rescates
+
+`POST /api/v1/rescates` registra un aviso en estado `disponible`. Está
+permitido para los roles `comercio` y `fundacion`. Un usuario `comercio` debe
+tener `usuarios.comercio_id` asociado y solo puede registrar avisos para ese
+comercio; `fundacion` puede registrar para cualquier comercio existente.
+
+El header opcional `Idempotency-Key` (entre 1 y 255 caracteres) permite repetir
+la misma solicitud sin crear otro rescate. Una repetición devuelve `201` y el
+header `Idempotent-Replay: true`. Los códigos principales son `201`, `401`,
+`403`, `409` para reutilización de una clave con otro contenido y `422` para
+errores de validación.
+
+```bash
+curl -X POST http://localhost:8000/api/v1/rescates \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: aviso-pan-001" \
+  -d '{
+    "comercio_id": "00000000-0000-0000-0000-000000000001",
+    "alimento": "Pan",
+    "cantidad_aprox": "20 unidades",
+    "lugar_recogida": "Calle 1",
+    "hora_limite": "2026-10-28T18:00:00-05:00",
+    "observaciones": "Recoger por la puerta lateral"
+  }'
+```
+
+La respuesta contiene `id`, `estado: "disponible"`, `registrado_por` y
+`creado_en`, asignados por el servidor. `hora_limite` debe incluir zona
+horaria. Los errores `422` se devuelven directamente como
+`[{"campo": "...", "mensaje": "..."}]`.
+
 ### Matriz de permisos propuesta
 
 Los endpoints de negocio aún corresponden a otros issues; donde el plan técnico no determina permisos concretos se marca **Por definir**.
@@ -74,7 +107,8 @@ Los endpoints de negocio aún corresponden a otros issues; donde el plan técnic
 
 Los datos de personas beneficiadas corresponden únicamente a `fundacion` y a la `organizacion` destino (RNF-005). Los endpoints que los expongan usarán `ROLES_VE_BENEFICIARIOS`.
 
-La relación entre un usuario comercio y `comercios` todavía no existe en el esquema; se resolverá en otro issue.
+La relación entre un usuario comercio y `comercios` se almacena en
+`usuarios.comercio_id` y se agrega en la migración `0002`.
 
 ### Base de datos y migraciones
 
@@ -86,21 +120,25 @@ alembic downgrade -1      # revierte la última
 alembic current           # muestra la versión aplicada
 ```
 
+La migración `0002` agrega la relación usuario-comercio, el historial de
+estados de rescates y las claves de idempotencia.
+
 Para crear una migración nueva: `alembic revision -m "descripcion"`. Se escribe a mano con `op.execute()` y siempre se completan `upgrade()` y `downgrade()`.
 
 ### Usuarios de desarrollo
 
-Para probar el login necesitas usuarios. El script crea uno por rol
-(`fundacion`, `voluntario`, `organizacion`, `comercio`) con correos
-`<rol>@example.com` y la contraseña que definas en `SEED_PASSWORD`.
+Para probar el login necesitas usuarios. El script crea uno por rol (`fundacion`, `voluntario`, `organizacion`, `comercio`) con correos `<rol>@example.com` y la contraseña que definas en `SEED_PASSWORD`.
+
 Es idempotente y **solo para desarrollo: no lo ejecutes en producción**.
 
 Desde `src/backend`, con el entorno virtual activo y las migraciones aplicadas:
 
 ```powershell
-$env:SEED_PASSWORD = "<clave-de-desarrollo>"     # macOS/Linux: export SEED_PASSWORD=...
+$env:SEED_PASSWORD = "<clave-de-desarrollo>"
 python -m scripts.seed_dev_usuarios
 ```
+
+Los tests que necesitan PostgreSQL se ejecutan únicamente si se define `TEST_DATABASE_URL` (por ejemplo, en `.env`); si no está definida, pytest los marca como omitidos. SQLite no es compatible con el esquema PostgreSQL.
 
 ## Documentación
 
