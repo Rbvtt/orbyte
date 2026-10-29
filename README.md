@@ -1,23 +1,22 @@
-# Red de Rescate de Alimentos
+# Rama de diseño: prototipos de experiencia de usuario
 
-Equipo: Orbyte
-Alternativa seleccionada: aplicación web responsiva con panel administrativo.
+## Descripción
+Esta rama contiene la documentación visual y los prototipos de diseño desarrollados para las historias de UX del proyecto Orbyte. La finalidad es dejar evidencia del diseño propuesto antes de pasar a la implementación en frontend.
 
-## Qué hace
+## Contenido de la rama
+Actualmente esta rama incluye prototipos relacionados con:
+- formulario de aviso de alimento disponible
+- vista de rescates activos para la fundación
+- evidencia de estados, validaciones y comportamiento visual
 
-La Red de Rescate de Alimentos ayuda a la Fundación Mesa Común a organizar los rescates de alimentos. Desde un enlace se podrán registrar avisos, asignar un voluntario, hacer seguimiento del rescate, confirmar la entrega y consultar reportes básicos. La fundación también podrá registrar avisos recibidos por llamada u otro medio cuando un comercio no pueda acceder a la página.
-
-## Cómo levantarlo
-
-El código de la aplicación se incorporará en la carpeta `src/` durante la construcción del MVP. Las instrucciones para ejecutar el sistema se completarán en el plan técnico cuando se defina el entorno de desarrollo y despliegue.
-
-## Documentación
-
-- [Constitución del proyecto](docs/spec/constitucion.md)
-- [Especificación de comportamientos](docs/spec/comportamientos.md)
-- [Plan técnico](docs/spec/plan-tecnico.md)
-- [Decisiones de arquitectura](docs/decisiones/) - se registrarán como ADR cuando se tome una decisión técnica de fondo.
-
-## Uso de asistentes de IA
-
-Se utilizó Codex para acompañar la creación inicial del repositorio y la organización de su documentación. El equipo revisa y valida cada cambio antes de incorporarlo al proyecto.
+## Estructura
+```text
+docs/
+├── design/
+│   ├── formulario-aviso/
+│   │   ├── README.md
+│   │   └── prototipo-formulario-aviso-360.png
+│   └── rescates-activos/
+│       ├── README.md
+│       ├── rescates-activos-desktop.jpg
+│       └── rescates-activos-mobile.jpg
