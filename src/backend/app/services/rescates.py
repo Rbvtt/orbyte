@@ -3,7 +3,7 @@ import json
 from uuid import UUID
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -23,6 +23,40 @@ class FieldValidationError(ValueError):
         super().__init__(message)
         self.field = field
         self.message = message
+
+
+def asignar_rescate(
+    db: Session,
+    rescate_id: UUID,
+    voluntario_id: UUID,
+    organizacion_id: UUID,
+    asignado_por: UUID,
+) -> bool:
+    result = db.execute(
+        text(
+            """
+            UPDATE rescates
+            SET voluntario_id = :voluntario_id,
+                organizacion_id = :organizacion_id,
+                estado = 'asignado',
+                asignado_en = now(),
+                asignado_por = :asignado_por
+            WHERE id = :rescate_id
+              AND estado = 'disponible'
+              AND voluntario_id IS NULL
+            RETURNING id
+            """
+        ),
+        {
+            "rescate_id": rescate_id,
+            "voluntario_id": voluntario_id,
+            "organizacion_id": organizacion_id,
+            "asignado_por": asignado_por,
+        },
+    )
+    asignacion_exitosa = result.scalar_one_or_none() is not None
+    db.commit()
+    return asignacion_exitosa
 
 
 def _request_hash(datos: RescateCreate) -> str:
