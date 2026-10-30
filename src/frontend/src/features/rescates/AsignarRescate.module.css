@@ -1,0 +1,254 @@
+.migas {
+  margin-bottom: 12px;
+}
+
+.migas a {
+  color: var(--muted);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.migas a:hover {
+  color: var(--text);
+}
+
+.aviso {
+  margin-bottom: 16px;
+}
+
+.columnas {
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.resumen {
+  position: sticky;
+  top: 72px;
+}
+
+.datos {
+  margin: 0;
+  padding: 4px 20px 12px;
+}
+
+.datos div {
+  display: grid;
+  gap: 2px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.datos div:last-child {
+  border-bottom: 0;
+}
+
+.datos dt {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.datos dd {
+  margin: 0;
+  font-weight: 500;
+}
+
+.formulario {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.grupo {
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.leyenda {
+  float: left;
+  width: 100%;
+  padding: 14px 20px;
+  font-size: 16px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--rule);
+}
+
+.leyenda + * {
+  clear: both;
+}
+
+.pista {
+  clear: both;
+  margin: 0;
+  padding: 10px 20px;
+  font-size: 13px;
+  color: var(--notice-ink);
+  background: var(--notice-bg);
+  border-bottom: 1px solid var(--notice-border);
+}
+
+.grupo > :global(.field__error) {
+  clear: both;
+  padding: 10px 20px 0;
+}
+
+.opciones {
+  clear: both;
+  display: grid;
+}
+
+.encabezadoOrg {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 80px 110px 200px;
+  gap: 12px;
+  padding: 10px 20px 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.encabezadoOrg span:first-child {
+  grid-column: 2;
+}
+
+.opcion {
+  display: grid;
+  align-items: start;
+  gap: 2px 12px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--rule);
+  cursor: pointer;
+  min-height: 56px;
+}
+
+.opcion:hover {
+  background: var(--raised);
+}
+
+.opcion[data-elegida] {
+  background: var(--active);
+}
+
+.opcion input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--primary);
+}
+
+.opcionOrg {
+  grid-template-columns: 28px minmax(0, 1fr) 80px 110px 200px;
+}
+
+.opcionVol {
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+}
+
+.nombre {
+  font-weight: 600;
+  min-width: 0;
+}
+
+.subOpcion {
+  display: block;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.opcionVol .subOpcion {
+  text-align: right;
+}
+
+.derecha {
+  text-align: right;
+}
+
+.horario {
+  color: var(--muted);
+}
+
+.vacio {
+  clear: both;
+  margin: 0;
+  padding: 16px 20px;
+  color: var(--muted);
+}
+
+.barraEnvio {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.resultado {
+  min-width: 0;
+}
+
+.yaNo {
+  margin: 0 0 8px;
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .columnas {
+    grid-template-columns: 1fr;
+  }
+
+  .resumen {
+    position: static;
+  }
+}
+
+/* Teléfono: cada organización es una fila de dos líneas con sus datos debajo. */
+@media (max-width: 640px) {
+  .encabezadoOrg {
+    display: none;
+  }
+
+  .opcionOrg {
+    grid-template-columns: 28px 1fr;
+  }
+
+  .opcionOrg > span:not(.nombre) {
+    grid-column: 2;
+    text-align: left;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .opcionOrg > span[data-etiqueta]::before {
+    content: attr(data-etiqueta) ": ";
+  }
+
+  .opcionVol {
+    grid-template-columns: 28px 1fr;
+  }
+
+  .opcionVol .subOpcion {
+    grid-column: 2;
+    text-align: left;
+  }
+
+  .leyenda,
+  .opcion,
+  .datos {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .barraEnvio {
+    position: sticky;
+    bottom: 0;
+    padding: 12px 0;
+    background: var(--ground);
+  }
+
+  .barraEnvio > :first-child {
+    flex: 1;
+  }
+}
