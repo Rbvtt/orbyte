@@ -35,6 +35,23 @@ Para correr las pruebas, desde `src/backend` y con el entorno virtual activo:
 python -m pytest -v
 ```
 
+### Frontend
+
+```powershell
+cd src/frontend
+npm install
+npm run dev
+```
+
+La aplicación queda en `http://localhost:5173` (el origen que ya permite `CORS_ORIGINS`) y toma la URL de la API de `VITE_API_URL` en el `.env` de la raíz.
+
+Mientras no exista la pantalla de inicio de sesión, para probar se guarda en el navegador (consola de las herramientas de desarrollador) el token del login del rol que se quiere probar. El formulario de aviso además necesita el comercio del usuario, que la API todavía no expone:
+
+```js
+localStorage.setItem("rescate.token", "<access_token>");
+localStorage.setItem("rescate.comercio_id", "<id del comercio del usuario>");
+```
+
 ## Autenticación y permisos
 
 Para obtener un token, envía el correo y la contraseña a `POST /api/v1/auth/login`:
