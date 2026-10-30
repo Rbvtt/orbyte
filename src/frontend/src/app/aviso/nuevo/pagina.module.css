@@ -1,0 +1,45 @@
+/* Cabecera y fondo del prototipo de #7. En pantallas grandes se conserva el ancho de teléfono. */
+.pantalla {
+  min-height: 100dvh;
+  background: #fafaf6;
+}
+
+.cabecera {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 60px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #d5ddd5;
+}
+
+.marca {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #286247;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.logo {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #d3e1d6;
+}
+
+.seccion {
+  color: #66706a;
+  font-size: 13px;
+}
+
+.contenido {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 24px 16px 40px;
+}
