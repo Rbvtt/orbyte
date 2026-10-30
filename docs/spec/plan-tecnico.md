@@ -21,6 +21,35 @@ Para garantizar la trazabilidad exigida por el caso y evitar el doble conteo de 
   - *Asociaciones:* Fecha y hora de creación, quién registró (comercio o fundación asistida), voluntario asignado, y organización receptora.
 - **Reporte / Impacto:** Una vista o tabla consolidada que suma los kilogramos recibidos y personas beneficiadas por periodo, filtrando estrictamente los rescates en estado `entregado`.
 
+La migración inicial se complementa con una segunda migración que relaciona
+usuarios de rol comercio con `comercios`, registra `rescate_historial` y
+persiste claves `Idempotency-Key` para evitar avisos duplicados.
+
+### Decisión técnica R4: asignación atómica
+
+La asignación de un rescate usa compare-and-set en una sola sentencia
+`UPDATE ... WHERE estado = 'disponible' AND voluntario_id IS NULL RETURNING
+id`. En el nivel de aislamiento `READ COMMITTED` de PostgreSQL, las
+asignaciones concurrentes compiten atómicamente por la misma fila: exactamente
+una puede cumplir la condición y las demás afectan cero filas. Así se evita un
+`SELECT ... FOR UPDATE` explícito, se reduce la contención y disminuye el
+riesgo de deadlocks. El `CHECK`
+`estado NOT IN ('asignado', 'recogido', 'entregado') OR voluntario_id IS NOT
+NULL` funciona como red de seguridad para impedir estados avanzados sin
+voluntario, incluso si otra operación omite el servicio.
+
+Se descartan las siguientes alternativas:
+
+- **Lock pesimista con `SELECT FOR UPDATE`:** añade una sentencia y mantiene
+  bloqueos explícitos durante la transacción, con más contención y mayor
+  superficie para deadlocks.
+- **Bloqueo optimista con columna de versión:** requiere una columna adicional,
+  incrementar y validar versiones, y resolver conflictos con lógica extra sin
+  aportar una garantía superior para este caso.
+- **Advisory locks:** desplazan la coordinación fuera de la fila y exigen que
+  todas las rutas conozcan y respeten la misma clave de bloqueo; no sustituyen
+  la integridad declarativa del `CHECK`.
+
 ## Integraciones
 Debido al techo presupuestal y para minimizar dependencias que puedan generar fallos, el MVP se mantendrá con dependencias externas mínimas:
 - **Servicios de Identidad/Autenticación:** El sistema gestionará credenciales seguras de manera interna (usando tokens JWT desde FastAPI).
