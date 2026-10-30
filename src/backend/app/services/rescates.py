@@ -5,6 +5,7 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import aliased
 from sqlalchemy.orm import Session
 
 from app.deps import CurrentUser
@@ -139,6 +140,138 @@ def asignar_rescate_con_historial(
     except Exception:
         db.rollback()
         raise
+
+
+def listar_rescates_activos(db: Session) -> list[dict]:
+    organizacion = aliased(OrganizacionReceptora)
+    voluntario = aliased(Usuario)
+    rows = db.execute(
+        select(
+            Rescate,
+            Comercio.nombre,
+            organizacion.nombre,
+            voluntario.nombre,
+        )
+        .join(Comercio, Comercio.id == Rescate.comercio_id)
+        .outerjoin(organizacion, organizacion.id == Rescate.organizacion_id)
+        .outerjoin(voluntario, voluntario.id == Rescate.voluntario_id)
+        .where(
+            Rescate.estado.in_(
+                (
+                    RescateEstado.DISPONIBLE,
+                    RescateEstado.ASIGNADO,
+                    RescateEstado.RECOGIDO,
+                )
+            )
+        )
+        .order_by(Rescate.hora_limite.asc())
+    ).all()
+    return [
+        {
+            "id": rescate.id,
+            "estado": rescate.estado,
+            "hora_limite": rescate.hora_limite,
+            "comercio": comercio_nombre,
+            "organizacion": organizacion_nombre,
+            "voluntario": voluntario_nombre,
+            "pendiente_asignar": rescate.estado == RescateEstado.DISPONIBLE,
+        }
+        for rescate, comercio_nombre, organizacion_nombre, voluntario_nombre in rows
+    ]
+
+
+def obtener_detalle_rescate(
+    db: Session, rescate_id: UUID, usuario: CurrentUser
+) -> dict | None:
+    organizacion = aliased(OrganizacionReceptora)
+    voluntario = aliased(Usuario)
+    row = db.execute(
+        select(
+            Rescate,
+            Comercio.nombre,
+            organizacion.nombre,
+            organizacion.direccion,
+            voluntario.nombre,
+            Usuario.organizacion_id,
+            Usuario.comercio_id,
+        )
+        .join(Comercio, Comercio.id == Rescate.comercio_id)
+        .outerjoin(organizacion, organizacion.id == Rescate.organizacion_id)
+        .outerjoin(voluntario, voluntario.id == Rescate.voluntario_id)
+        .join(Usuario, Usuario.id == usuario.usuario_id)
+        .where(Rescate.id == rescate_id)
+    ).one_or_none()
+    if row is None:
+        return None
+
+    (
+        rescate,
+        comercio_nombre,
+        organizacion_nombre,
+        lugar_entrega,
+        voluntario_nombre,
+        usuario_organizacion_id,
+        usuario_comercio_id,
+    ) = row
+    autorizado = usuario.rol == UsuarioRol.FUNDACION.value or (
+        usuario.rol == UsuarioRol.VOLUNTARIO.value
+        and rescate.voluntario_id == usuario.usuario_id
+    ) or (
+        usuario.rol == UsuarioRol.ORGANIZACION.value
+        and rescate.organizacion_id == usuario_organizacion_id
+    ) or (
+        usuario.rol == UsuarioRol.COMERCIO.value
+        and rescate.comercio_id == usuario_comercio_id
+    )
+    if not autorizado:
+        return None
+
+    detalle = {
+        "id": rescate.id,
+        "estado": rescate.estado,
+        "hora_limite": rescate.hora_limite,
+        "pendiente_asignar": rescate.estado == RescateEstado.DISPONIBLE,
+        "comercio": comercio_nombre,
+        "alimento": rescate.alimento,
+        "cantidad_aprox": rescate.cantidad_aprox,
+        "lugar_recogida": rescate.lugar_recogida,
+        "lugar_entrega": lugar_entrega,
+        "organizacion": organizacion_nombre,
+        "voluntario": voluntario_nombre,
+        "asignado_en": rescate.asignado_en,
+        "asignado_por": rescate.asignado_por,
+        "observaciones": rescate.observaciones,
+    }
+    if usuario.rol == UsuarioRol.FUNDACION.value:
+        return detalle
+    if usuario.rol == UsuarioRol.VOLUNTARIO.value:
+        return {
+            key: detalle[key]
+            for key in (
+                "id",
+                "estado",
+                "hora_limite",
+                "pendiente_asignar",
+                "cantidad_aprox",
+                "lugar_recogida",
+                "lugar_entrega",
+                "organizacion",
+                "voluntario",
+                "asignado_en",
+            )
+        }
+    return {
+        key: detalle[key]
+        for key in (
+            "id",
+            "estado",
+            "pendiente_asignar",
+            "comercio",
+            "organizacion",
+            "voluntario",
+            "asignado_en",
+        )
+    }
 
 
 def _request_hash(datos: RescateCreate) -> str:

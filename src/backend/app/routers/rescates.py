@@ -9,6 +9,8 @@ from app.schemas.rescates import (
     RescateAsignacionIn,
     RescateAsignacionOut,
     RescateCreate,
+    RescateDetalleOut,
+    RescateListaOut,
     RescateOut,
 )
 from app.services.rescates import (
@@ -17,10 +19,26 @@ from app.services.rescates import (
     RescateNoEncontrado,
     asignar_rescate_con_historial,
     crear_rescate,
+    listar_rescates_activos,
+    obtener_detalle_rescate,
 )
 
 
 router = APIRouter(prefix="/api/v1/rescates", tags=["rescates"])
+
+
+@router.get("", response_model=list[RescateListaOut])
+def list_rescates(
+    estado: str | None = None,
+    _current_user: CurrentUser = Depends(require_role("fundacion")),
+    db: Session = Depends(get_db),
+) -> list[RescateListaOut]:
+    if estado != "activos":
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="El parámetro estado debe ser 'activos'",
+        )
+    return [RescateListaOut.model_validate(item) for item in listar_rescates_activos(db)]
 
 
 @router.post(
@@ -39,6 +57,27 @@ def create_rescate(
     if replay:
         response.headers["Idempotent-Replay"] = "true"
     return RescateOut.model_validate(rescate)
+
+
+@router.get(
+    "/{rescate_id}",
+    response_model=RescateDetalleOut,
+    response_model_exclude_none=True,
+)
+def get_rescate(
+    rescate_id: UUID,
+    current_user: CurrentUser = Depends(
+        require_role("fundacion", "voluntario", "organizacion", "comercio")
+    ),
+    db: Session = Depends(get_db),
+) -> RescateDetalleOut:
+    detalle = obtener_detalle_rescate(db, rescate_id, current_user)
+    if detalle is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="El rescate no existe",
+        )
+    return RescateDetalleOut.model_validate(detalle)
 
 
 @router.patch(
