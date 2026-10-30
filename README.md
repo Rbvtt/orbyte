@@ -125,6 +125,30 @@ Para poblar la pantalla de asignación, la fundación puede consultar:
 Ambos listados requieren rol `fundacion` y no exponen correos, hashes de
 contraseña ni otros datos sensibles.
 
+### Consulta y seguimiento de rescates
+
+`GET /api/v1/rescates?estado=activos` está disponible únicamente para
+`fundacion`. El parámetro `estado=activos` es obligatorio; representa los
+estados `disponible`, `asignado` y `recogido`, ordenados por `hora_limite`
+ascendente. Cada elemento incluye `id`, estado, hora límite, comercio,
+organización, voluntario y el campo calculado `pendiente_asignar`, que es
+`true` únicamente cuando el estado es `disponible`. Los datos completos del
+traslado no se incluyen en el listado.
+
+`GET /api/v1/rescates/{id}` requiere autenticación y aplica estos permisos:
+
+- `fundacion` puede consultar cualquier rescate.
+- `voluntario` solo puede consultar rescates donde sea el voluntario asignado.
+- `organizacion` solo puede consultar rescates destinados a su organización.
+- `comercio` solo puede consultar rescates de sus propios avisos.
+
+Un rescate inexistente o sin permiso responde `404` para no revelar la
+existencia del recurso. El voluntario asignado recibe los cuatro datos del
+traslado: `lugar_recogida`, `hora_limite`, `cantidad_aprox` y
+`lugar_entrega`, derivado de `organizaciones_receptoras.direccion`. Los
+campos devueltos se filtran según el rol y nunca incluyen credenciales,
+tokens ni hashes.
+
 ### Matriz de permisos propuesta
 
 Los endpoints de negocio aún corresponden a otros issues; donde el plan técnico no determina permisos concretos se marca **Por definir**.
@@ -134,6 +158,8 @@ Los endpoints de negocio aún corresponden a otros issues; donde el plan técnic
 | `POST /api/v1/auth/login` | Público |
 | `POST /rescates` (#6) | `comercio` (solo el suyo) y `fundacion`; `voluntario` y `organizacion` reciben 403 |
 | `PATCH /rescates/{id}/asignacion` (#10) | `fundacion` |
+| `GET /rescates?estado=activos` (#37) | `fundacion` |
+| `GET /rescates/{id}` (#37) | Según propietario o asignación |
 | `POST /rescates/{id}/recogida` (#16) | Por definir |
 | `POST /rescates/{id}/entrega` (#17) | Por definir |
 | `GET /rescates` y `GET /rescates/{id}` (#37) | Por definir |

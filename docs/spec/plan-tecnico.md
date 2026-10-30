@@ -73,6 +73,33 @@ segundo expone solo `id`, `nombre`, `medio_transporte` y `disponibilidad` de
 voluntarios activos. No se exponen correos, hashes de contraseñas ni otros
 datos personales innecesarios.
 
+### Consulta de rescates y seguimiento
+
+`GET /api/v1/rescates?estado=activos` requiere `fundacion` y exige el
+parámetro `estado=activos`. El filtro representa los estados
+`disponible`, `asignado` y `recogido`, y la respuesta se ordena por
+`hora_limite` ascendente. Cada elemento contiene los identificadores y
+nombres operativos de comercio, organización y voluntario, además del estado,
+la hora límite y `pendiente_asignar`. Este último es un campo derivado que vale
+`true` cuando el estado es `disponible`; no se persiste en la base de datos.
+
+`GET /api/v1/rescates/{id}` aplica autorización por propietario o asignación:
+fundación puede consultar cualquier rescate; un voluntario solo el rescate
+asignado a su usuario; una organización solo los rescates cuyo destino es la
+organización asociada a su usuario; y un comercio solo sus propios avisos.
+Tanto un identificador inexistente como un rescate existente sin permiso
+responden `404`, decisión adoptada para no revelar recursos a usuarios no
+autorizados.
+
+Las respuestas se filtran por rol. El voluntario asignado recibe los cuatro
+datos del traslado definidos en CA-02.3: `lugar_recogida`,
+`hora_limite`, `cantidad_aprox` y `lugar_entrega`. Este último se deriva de
+`organizaciones_receptoras.direccion`, porque el esquema de `rescates` no
+contiene una columna independiente para el lugar de entrega. Fundación recibe
+el detalle operativo completo; organización y comercio reciben únicamente los
+campos necesarios para seguimiento, sin credenciales, tokens, hashes ni datos
+personales innecesarios.
+
 ## Integraciones
 Debido al techo presupuestal y para minimizar dependencias que puedan generar fallos, el MVP se mantendrá con dependencias externas mínimas:
 - **Servicios de Identidad/Autenticación:** El sistema gestionará credenciales seguras de manera interna (usando tokens JWT desde FastAPI).
