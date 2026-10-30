@@ -21,7 +21,65 @@ Para garantizar la trazabilidad exigida por el caso y evitar el doble conteo de 
   - *Asociaciones:* Fecha y hora de creación, quién registró (comercio o fundación asistida), voluntario asignado, y organización receptora.
 - **Reporte / Impacto:** Una vista o tabla consolidada que suma los kilogramos recibidos y personas beneficiadas por periodo, filtrando estrictamente los rescates en estado `entregado`.
 
+## Modelo detallado, transacciones y permisos
+
+### Detalle del modelo y trazabilidad
+
+El esquema integrado por el PR #65 contiene `usuarios`, `comercios`, `organizaciones_receptoras`, `voluntarios` y `rescates`. La siguiente separación distingue lo implementado del diseño aún pendiente:
+
+| Entidad o campos | Uso y criterio | Estado al 29-10-2026 |
+|---|---|---|
+| `rescates`: comercio, alimento, cantidad aproximada, lugar y hora límite; `registrado_por`, `creado_en` | CA-01.1 y CA-01.3; identidad del comercio y del actor que registra | Columnas integradas; API y formulario pendientes de integración |
+| `organizaciones_receptoras`: capacidad, refrigeración, horario, puede recoger | RF-002 y CA-02.1; elegir destino adecuado | Tabla integrada; datos representativos en `docs/datos/cmp02/` |
+| `voluntarios`: usuario, transporte y disponibilidad | RF-006 y CA-02.1/CA-02.3 | Tabla integrada; datos representativos preparados |
+| `organizacion_id`, `voluntario_id`, `asignado_en`, `asignado_por` | CA-02.1; destino, traslado y responsable de asignación | Columnas integradas; operación atómica pendiente (#11) |
+| `recogido_en`, `entregado_en`, `recibido_por`, `cantidad_recibida`, `unidad_recibida`, `es_medida`, `personas_beneficiadas` | CA-04.1–CA-04.3; recepción e impacto trazables | Columnas integradas; validación de transición pendiente |
+| `motivo_no_completado` | CA-03.4; explicación del cierre sin entrega | Columna y CHECK de no nulo integrados |
+| `historial_estados` | CA-03.3, RF-014, RF-015, RNF-011 | Diseño pendiente de implementación en #35 |
+
+La organización es la entidad receptora (`rescates.organizacion_id`); quien recibe es una persona autenticada (`rescates.recibido_por` → `usuarios.id`). No son intercambiables. La API debe comprobar que el usuario pertenece a la organización destino. `usuarios.organizacion_id` expresa esa relación. La relación usuario–comercio todavía debe definirse e implementarse en #40/#58: no se debe confiar en un `comercio_id` arbitrario enviado por el cliente.
+
+El esquema inicial no impone todas las reglas de negocio. Por ejemplo, los campos de recepción existentes no sustituyen la validación de estado previo, pertenencia al destino, unidad, condición medida/estimada y fecha de entrega exigida por CA-04.2 y CA-04.4.
+
+### Asignación atómica y registro de movimientos
+
+Para #11 se elige una única sentencia condicional, parametrizada, en PostgreSQL READ COMMITTED:
+
+```sql
+UPDATE rescates
+SET voluntario_id = :voluntario_id,
+    organizacion_id = :organizacion_id,
+    estado = 'asignado',
+    asignado_en = now(),
+    asignado_por = :actor_id
+WHERE id = :rescate_id
+  AND estado = 'disponible'
+  AND voluntario_id IS NULL
+RETURNING id;
+```
+
+PostgreSQL serializa las actualizaciones concurrentes de la misma fila y vuelve a comprobar la condición: solo una solicitud puede cambiar un rescate disponible. La API debe distinguir inexistencia (404) de conflicto de asignación (409), validar el rol y las referencias, y no anunciar éxito cuando no se devuelve ninguna fila. No se hace una lectura seguida de una escritura incondicional. #13 debe demostrar exactamente un ganador y que se conserva su voluntario. #11 también contempla un CHECK que exija voluntario en estados asignado, recogido y entregado; no está en la migración inicial.
+
+El historial previsto en #35 contiene `id`, `rescate_id`, `estado_anterior`, `estado_nuevo`, `actor_id`, `ocurrido_en` y `detalle JSONB`. La actualización condicional y el INSERT del historial deben compartir transacción; un fallo del historial revierte el cambio. El rol de aplicación no tendrá UPDATE ni DELETE sobre el historial y debe ser distinto del propietario usado para migraciones. Esta protección y la función `cambiar_estado()` siguen pendientes: no se presentan como capacidades actuales.
+
+### Matriz de permisos prevista (RF-024 / #40)
+
+Los permisos se verifican en el servidor por rol **y por pertenencia al recurso**. Esta matriz expresa el comportamiento esperado; su implementación y pruebas corresponden a #40 y a cada endpoint.
+
+| Acción | Fundación | Comercio | Voluntario | Organización |
+|---|---|---|---|---|
+| Registrar aviso | En nombre de un comercio (CA-01.3) | Solo el propio comercio | No | No |
+| Asignar destino y voluntario | Sí | No | No | No |
+| Consultar rescates | Seguimiento de rescates | Solo propios | Solo asignados a sí mismo | Solo los de su organización |
+| Registrar recogida | No | No | Solo el asignado, desde `asignado` | No |
+| Confirmar recepción y registrar beneficiados | No | No | No | Solo destino, desde `recogido` |
+| Cerrar como no completado | Sí, con motivo y estado permitido | No | No | No |
+| Consultar impacto global | Sí | No | No | No |
+
+Los beneficiados solo son visibles para fundación y organización destino. El usuario y rol proceden del token verificado y del usuario activo, no de campos de identidad enviados por el cliente. Sin autenticación: 401; rol no autorizado: 403. Los endpoints deben evitar exponer recursos ajenos y contar con pruebas de acceso cruzado. La matriz no amplía el alcance de la entrega académica, que debe confirmarse con su guía.
+
 ## Integraciones
+
 Debido al techo presupuestal y para minimizar dependencias que puedan generar fallos, el MVP se mantendrá con dependencias externas mínimas:
 - **Servicios de Identidad/Autenticación:** El sistema gestionará credenciales seguras de manera interna (usando tokens JWT desde FastAPI).
 - *Posibles integraciones futuras (fuera del MVP):* Una vez validado el piloto y asegurada la financiación, se podría evaluar la integración de un servicio de notificaciones transaccionales (SMS o correo) para avisar rápidamente al voluntario asignado.

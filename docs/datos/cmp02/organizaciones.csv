@@ -1,0 +1,4 @@
+id,nombre,direccion,capacidad_kg,refrigeracion,horario_recepcion,puede_recoger
+00000000-0000-4000-8000-000000000201,Organización Demo A,Punto ficticio A,80.00,true,Lunes a viernes 08:00-12:00,true
+00000000-0000-4000-8000-000000000202,Organización Demo B,Punto ficticio B,25.00,false,Lunes a sábado 14:00-17:00,false
+00000000-0000-4000-8000-000000000203,Organización Demo C,Punto ficticio C,0.00,false,Sin disponibilidad temporal,false
