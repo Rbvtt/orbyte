@@ -9,7 +9,25 @@ La Red de Rescate de Alimentos ayuda a la Fundación Mesa Común a organizar los
 
 ## Cómo levantarlo
 
-El código de la aplicación se incorporará en la carpeta `src/` durante la construcción del MVP. Las instrucciones para ejecutar el sistema se completarán en el plan técnico cuando se defina el entorno de desarrollo y despliegue.
+El código de la aplicación vive en `src/`: el backend (FastAPI) en `src/backend/` y el frontend (React) en `src/frontend/`.
+
+### Variables de entorno
+
+1. Copia `.env.example` como `.env` en la raíz del repositorio y completa `DATABASE_URL` y `JWT_SECRET`.
+2. El archivo `.env` está en `.gitignore` y nunca se sube al repositorio.
+3. En producción las variables se configuran solo en los paneles de Render (backend: `DATABASE_URL`, `JWT_SECRET`, `JWT_EXPIRES_MIN`, `CORS_ORIGINS`) y Vercel (frontend: `VITE_API_URL`).
+
+### Backend
+
+```bash
+cd src/backend
+python -m venv .venv
+.venv/Scripts/activate        # en macOS o Linux: source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+La API queda en `http://localhost:8000` y `GET /health` responde `{"status": "ok"}`.
 
 ## Documentación
 
