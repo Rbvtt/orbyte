@@ -1,0 +1,4 @@
+usuario_id,nombre,email,medio_transporte,disponibilidad
+00000000-0000-4000-8000-000000000301,Voluntario Demo A,voluntario-a@example.invalid,Bicicleta,Lunes a viernes 08:00-12:00
+00000000-0000-4000-8000-000000000302,Voluntario Demo B,voluntario-b@example.invalid,Automóvil,Lunes a sábado 14:00-17:00
+00000000-0000-4000-8000-000000000303,Voluntario Demo C,voluntario-c@example.invalid,A pie,Sin disponibilidad temporal

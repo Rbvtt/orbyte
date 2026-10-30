@@ -21,86 +21,65 @@ Para garantizar la trazabilidad exigida por el caso y evitar el doble conteo de 
   - *Asociaciones:* Fecha y hora de creación, quién registró (comercio o fundación asistida), voluntario asignado, y organización receptora.
 - **Reporte / Impacto:** Una vista o tabla consolidada que suma los kilogramos recibidos y personas beneficiadas por periodo, filtrando estrictamente los rescates en estado `entregado`.
 
-La migración inicial se complementa con una segunda migración que relaciona
-usuarios de rol comercio con `comercios`, registra `rescate_historial` y
-persiste claves `Idempotency-Key` para evitar avisos duplicados.
+## Modelo detallado, transacciones y permisos
 
-### Decisión técnica R4: asignación atómica
+### Detalle del modelo y trazabilidad
 
-La asignación de un rescate usa compare-and-set en una sola sentencia
-`UPDATE ... WHERE estado = 'disponible' AND voluntario_id IS NULL RETURNING
-id`. En el nivel de aislamiento `READ COMMITTED` de PostgreSQL, las
-asignaciones concurrentes compiten atómicamente por la misma fila: exactamente
-una puede cumplir la condición y las demás afectan cero filas. Así se evita un
-`SELECT ... FOR UPDATE` explícito, se reduce la contención y disminuye el
-riesgo de deadlocks. El `CHECK`
-`estado NOT IN ('asignado', 'recogido', 'entregado') OR voluntario_id IS NOT
-NULL` funciona como red de seguridad para impedir estados avanzados sin
-voluntario, incluso si otra operación omite el servicio.
+El esquema integrado por el PR #65 contiene `usuarios`, `comercios`, `organizaciones_receptoras`, `voluntarios` y `rescates`. La siguiente separación distingue lo implementado del diseño aún pendiente:
 
-Se descartan las siguientes alternativas:
+| Entidad o campos | Uso y criterio | Estado al 29-10-2026 |
+|---|---|---|
+| `rescates`: comercio, alimento, cantidad aproximada, lugar y hora límite; `registrado_por`, `creado_en` | CA-01.1 y CA-01.3; identidad del comercio y del actor que registra | Columnas integradas; API y formulario pendientes de integración |
+| `organizaciones_receptoras`: capacidad, refrigeración, horario, puede recoger | RF-002 y CA-02.1; elegir destino adecuado | Tabla integrada; datos representativos en `docs/datos/cmp02/` |
+| `voluntarios`: usuario, transporte y disponibilidad | RF-006 y CA-02.1/CA-02.3 | Tabla integrada; datos representativos preparados |
+| `organizacion_id`, `voluntario_id`, `asignado_en`, `asignado_por` | CA-02.1; destino, traslado y responsable de asignación | Columnas integradas; operación atómica pendiente (#11) |
+| `recogido_en`, `entregado_en`, `recibido_por`, `cantidad_recibida`, `unidad_recibida`, `es_medida`, `personas_beneficiadas` | CA-04.1–CA-04.3; recepción e impacto trazables | Columnas integradas; validación de transición pendiente |
+| `motivo_no_completado` | CA-03.4; explicación del cierre sin entrega | Columna y CHECK de no nulo integrados |
+| `historial_estados` | CA-03.3, RF-014, RF-015, RNF-011 | Diseño pendiente de implementación en #35 |
 
-- **Lock pesimista con `SELECT FOR UPDATE`:** añade una sentencia y mantiene
-  bloqueos explícitos durante la transacción, con más contención y mayor
-  superficie para deadlocks.
-- **Bloqueo optimista con columna de versión:** requiere una columna adicional,
-  incrementar y validar versiones, y resolver conflictos con lógica extra sin
-  aportar una garantía superior para este caso.
-- **Advisory locks:** desplazan la coordinación fuera de la fila y exigen que
-  todas las rutas conozcan y respeten la misma clave de bloqueo; no sustituyen
-  la integridad declarativa del `CHECK`.
+La organización es la entidad receptora (`rescates.organizacion_id`); quien recibe es una persona autenticada (`rescates.recibido_por` → `usuarios.id`). No son intercambiables. La API debe comprobar que el usuario pertenece a la organización destino. `usuarios.organizacion_id` expresa esa relación. La relación usuario–comercio todavía debe definirse e implementarse en #40/#58: no se debe confiar en un `comercio_id` arbitrario enviado por el cliente.
 
-### Contrato API de asignación
+El esquema inicial no impone todas las reglas de negocio. Por ejemplo, los campos de recepción existentes no sustituyen la validación de estado previo, pertenencia al destino, unidad, condición medida/estimada y fecha de entrega exigida por CA-04.2 y CA-04.4.
 
-El endpoint `PATCH /api/v1/rescates/{id}/asignacion` está restringido al rol
-`fundacion`. Recibe `organizacion_id` y `voluntario_id` como UUID obligatorios.
-Valida la existencia de ambos recursos y que el voluntario esté activo. El
-usuario autenticado determina `asignado_por`; ese valor no forma parte del
-body.
+### Asignación atómica y registro de movimientos
 
-El `UPDATE` compare-and-set y la inserción en `rescate_historial` se ejecutan
-en la misma transacción. Una respuesta `200` devuelve el rescate en estado
-`asignado` junto con `organizacion_id`, `voluntario_id`, `asignado_en` y
-`asignado_por`. La respuesta `401` corresponde a autenticación ausente o
-inválida; `403`, a un rol distinto de `fundacion`; `404`, a un rescate,
-organización o voluntario inexistente; `409`, a un rescate que ya no está
-disponible; y `422`, a un body inválido.
+Para #11 se elige una única sentencia condicional, parametrizada, en PostgreSQL READ COMMITTED:
 
-Los catálogos `GET /api/v1/organizaciones` y
-`GET /api/v1/voluntarios` también requieren `fundacion`. El primero expone
-solo `id`, `nombre`, `capacidad_kg`, `refrigeracion` y `horario_recepcion`. El
-segundo expone solo `id`, `nombre`, `medio_transporte` y `disponibilidad` de
-voluntarios activos. No se exponen correos, hashes de contraseñas ni otros
-datos personales innecesarios.
+```sql
+UPDATE rescates
+SET voluntario_id = :voluntario_id,
+    organizacion_id = :organizacion_id,
+    estado = 'asignado',
+    asignado_en = now(),
+    asignado_por = :actor_id
+WHERE id = :rescate_id
+  AND estado = 'disponible'
+  AND voluntario_id IS NULL
+RETURNING id;
+```
 
-### Consulta de rescates y seguimiento
+PostgreSQL serializa las actualizaciones concurrentes de la misma fila y vuelve a comprobar la condición: solo una solicitud puede cambiar un rescate disponible. La API debe distinguir inexistencia (404) de conflicto de asignación (409), validar el rol y las referencias, y no anunciar éxito cuando no se devuelve ninguna fila. No se hace una lectura seguida de una escritura incondicional. #13 debe demostrar exactamente un ganador y que se conserva su voluntario. #11 también contempla un CHECK que exija voluntario en estados asignado, recogido y entregado; no está en la migración inicial.
 
-`GET /api/v1/rescates?estado=activos` requiere `fundacion` y exige el
-parámetro `estado=activos`. El filtro representa los estados
-`disponible`, `asignado` y `recogido`, y la respuesta se ordena por
-`hora_limite` ascendente. Cada elemento contiene los identificadores y
-nombres operativos de comercio, organización y voluntario, además del estado,
-la hora límite y `pendiente_asignar`. Este último es un campo derivado que vale
-`true` cuando el estado es `disponible`; no se persiste en la base de datos.
+El historial previsto en #35 contiene `id`, `rescate_id`, `estado_anterior`, `estado_nuevo`, `actor_id`, `ocurrido_en` y `detalle JSONB`. La actualización condicional y el INSERT del historial deben compartir transacción; un fallo del historial revierte el cambio. El rol de aplicación no tendrá UPDATE ni DELETE sobre el historial y debe ser distinto del propietario usado para migraciones. Esta protección y la función `cambiar_estado()` siguen pendientes: no se presentan como capacidades actuales.
 
-`GET /api/v1/rescates/{id}` aplica autorización por propietario o asignación:
-fundación puede consultar cualquier rescate; un voluntario solo el rescate
-asignado a su usuario; una organización solo los rescates cuyo destino es la
-organización asociada a su usuario; y un comercio solo sus propios avisos.
-Tanto un identificador inexistente como un rescate existente sin permiso
-responden `404`, decisión adoptada para no revelar recursos a usuarios no
-autorizados.
+### Matriz de permisos prevista (RF-024 / #40)
 
-Las respuestas se filtran por rol. El voluntario asignado recibe los cuatro
-datos del traslado definidos en CA-02.3: `lugar_recogida`,
-`hora_limite`, `cantidad_aprox` y `lugar_entrega`. Este último se deriva de
-`organizaciones_receptoras.direccion`, porque el esquema de `rescates` no
-contiene una columna independiente para el lugar de entrega. Fundación recibe
-el detalle operativo completo; organización y comercio reciben únicamente los
-campos necesarios para seguimiento, sin credenciales, tokens, hashes ni datos
-personales innecesarios.
+Los permisos se verifican en el servidor por rol **y por pertenencia al recurso**. Esta matriz expresa el comportamiento esperado; su implementación y pruebas corresponden a #40 y a cada endpoint.
+
+| Acción | Fundación | Comercio | Voluntario | Organización |
+|---|---|---|---|---|
+| Registrar aviso | En nombre de un comercio (CA-01.3) | Solo el propio comercio | No | No |
+| Asignar destino y voluntario | Sí | No | No | No |
+| Consultar rescates | Seguimiento de rescates | Solo propios | Solo asignados a sí mismo | Solo los de su organización |
+| Registrar recogida | No | No | Solo el asignado, desde `asignado` | No |
+| Confirmar recepción y registrar beneficiados | No | No | No | Solo destino, desde `recogido` |
+| Cerrar como no completado | Sí, con motivo y estado permitido | No | No | No |
+| Consultar impacto global | Sí | No | No | No |
+
+Los beneficiados solo son visibles para fundación y organización destino. El usuario y rol proceden del token verificado y del usuario activo, no de campos de identidad enviados por el cliente. Sin autenticación: 401; rol no autorizado: 403. Los endpoints deben evitar exponer recursos ajenos y contar con pruebas de acceso cruzado. La matriz no amplía el alcance de la entrega académica, que debe confirmarse con su guía.
 
 ## Integraciones
+
 Debido al techo presupuestal y para minimizar dependencias que puedan generar fallos, el MVP se mantendrá con dependencias externas mínimas:
 - **Servicios de Identidad/Autenticación:** El sistema gestionará credenciales seguras de manera interna (usando tokens JWT desde FastAPI).
 - *Posibles integraciones futuras (fuera del MVP):* Una vez validado el piloto y asegurada la financiación, se podría evaluar la integración de un servicio de notificaciones transaccionales (SMS o correo) para avisar rápidamente al voluntario asignado.
