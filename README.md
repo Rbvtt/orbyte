@@ -89,6 +89,42 @@ La respuesta contiene `id`, `estado: "disponible"`, `registrado_por` y
 horaria. Los errores `422` se devuelven directamente como
 `[{"campo": "...", "mensaje": "..."}]`.
 
+### Asignación de rescates
+
+`PATCH /api/v1/rescates/{id}/asignacion` permite a un usuario con rol
+`fundacion` asignar una organización receptora y un voluntario:
+
+```json
+{
+  "organizacion_id": "uuid-de-la-organizacion",
+  "voluntario_id": "uuid-del-voluntario"
+}
+```
+
+La operación es atómica y registra la transición `disponible` -> `asignado`
+en `rescate_historial`. El campo `asignado_por` siempre se obtiene del usuario
+autenticado en el token; nunca se acepta desde el body.
+
+- `200`: devuelve el rescate asignado con organización, voluntario,
+  `asignado_en` y `asignado_por`.
+- `401`: falta el token o no es válido.
+- `403`: el usuario no tiene rol `fundacion`.
+- `404`: el rescate, la organización o el voluntario no existe o el voluntario
+  está inactivo.
+- `409`: el rescate ya no está disponible; si ya tiene voluntario, el mensaje
+  incluye su nombre.
+- `422`: body incompleto o con UUID inválidos.
+
+Para poblar la pantalla de asignación, la fundación puede consultar:
+
+- `GET /api/v1/organizaciones`: devuelve `id`, `nombre`, `capacidad_kg`,
+  `refrigeracion` y `horario_recepcion`.
+- `GET /api/v1/voluntarios`: devuelve `id`, `nombre`, `medio_transporte` y
+  `disponibilidad` de usuarios voluntarios activos.
+
+Ambos listados requieren rol `fundacion` y no exponen correos, hashes de
+contraseña ni otros datos sensibles.
+
 ### Matriz de permisos propuesta
 
 Los endpoints de negocio aún corresponden a otros issues; donde el plan técnico no determina permisos concretos se marca **Por definir**.
@@ -97,7 +133,7 @@ Los endpoints de negocio aún corresponden a otros issues; donde el plan técnic
 |---|---|
 | `POST /api/v1/auth/login` | Público |
 | `POST /rescates` (#6) | `comercio` (solo el suyo) y `fundacion`; `voluntario` y `organizacion` reciben 403 |
-| `PATCH /rescates/{id}/asignacion` (#10) | Por definir |
+| `PATCH /rescates/{id}/asignacion` (#10) | `fundacion` |
 | `POST /rescates/{id}/recogida` (#16) | Por definir |
 | `POST /rescates/{id}/entrega` (#17) | Por definir |
 | `GET /rescates` y `GET /rescates/{id}` (#37) | Por definir |
