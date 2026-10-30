@@ -12,10 +12,8 @@ from app.config import get_settings
 get_settings.cache_clear()
 
 import pytest
-from sqlalchemy import create_engine, delete
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
-
-from app.models import IdempotencyKey, Rescate, RescateHistorial
 
 
 @pytest.fixture
@@ -38,8 +36,7 @@ def real_db():
     engine = create_engine(database_url, pool_pre_ping=True)
     with Session(engine) as db:
         yield db
-        db.execute(delete(IdempotencyKey))
-        db.execute(delete(RescateHistorial))
-        db.execute(delete(Rescate))
+        # historial_estados es de solo inserción (#35): no admite DELETE, se limpia con TRUNCATE.
+        db.execute(text("TRUNCATE idempotency_keys, historial_estados, rescates"))
         db.commit()
     engine.dispose()
