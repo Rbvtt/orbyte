@@ -202,6 +202,13 @@ alembic current           # muestra la versión aplicada
 La migración `0002` agrega la relación usuario-comercio, el historial de
 estados de rescates y las claves de idempotencia.
 
+La migración `0004` deja ese historial con la forma de #35: `historial_estados`
+(`id` BIGSERIAL, `rescate_id`, `estado_anterior`, `estado_nuevo`, `actor_id`,
+`ocurrido_en`, `detalle`), de solo inserción: un `UPDATE` o `DELETE` sobre la tabla
+falla. El servicio para las transiciones de estado es `cambiar_estado()` de
+`app/services/transiciones.py`: hace el `UPDATE` condicional y la fila del
+historial en la misma transacción.
+
 Para crear una migración nueva: `alembic revision -m "descripcion"`. Se escribe a mano con `op.execute()` y siempre se completan `upgrade()` y `downgrade()`.
 
 ### Usuarios de desarrollo

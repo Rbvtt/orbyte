@@ -3,8 +3,8 @@ from uuid import UUID
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, String, Text, text
-from sqlalchemy.dialects.postgresql import ENUM, UUID as PostgreSQLUUID
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Integer, Numeric, String, Text, text
+from sqlalchemy.dialects.postgresql import ENUM, JSONB, UUID as PostgreSQLUUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -150,13 +150,11 @@ class Rescate(Base):
 
 
 class RescateHistorial(Base):
-    __tablename__ = "rescate_historial"
+    # Tabla historial_estados de #35 (migración 0004). Los atributos cambiado_por/cambiado_en
+    # se conservan para el código existente y apuntan a las columnas actor_id/ocurrido_en.
+    __tablename__ = "historial_estados"
 
-    id: Mapped[UUID] = mapped_column(
-        PostgreSQLUUID(as_uuid=True),
-        primary_key=True,
-        server_default=text("gen_random_uuid()"),
-    )
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     rescate_id: Mapped[UUID] = mapped_column(
         PostgreSQLUUID(as_uuid=True),
         ForeignKey("rescates.id", ondelete="CASCADE"),
@@ -169,10 +167,13 @@ class RescateHistorial(Base):
         postgres_enum(RescateEstado, "rescate_estado"), nullable=False
     )
     cambiado_por: Mapped[UUID] = mapped_column(
-        PostgreSQLUUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=False
+        "actor_id", PostgreSQLUUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=False
     )
     cambiado_en: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=text("now()")
+        "ocurrido_en", DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+    detalle: Mapped[dict] = mapped_column(
+        JSONB, nullable=False, server_default=text("'{}'::jsonb")
     )
 
 
