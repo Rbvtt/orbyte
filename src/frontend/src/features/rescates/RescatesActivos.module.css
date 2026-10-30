@@ -1,0 +1,428 @@
+/* Diseño de «Rescates activos» (#14, docs/design/rescates-activos). */
+
+.cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px 24px;
+  margin-bottom: 20px;
+}
+
+.subtitulo {
+  margin: 6px 0 0;
+  color: var(--muted);
+}
+
+.fecha {
+  text-align: right;
+}
+
+.fecha p {
+  margin: 0;
+}
+
+.hoy {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+/* ── Resumen por estado ── */
+.resumen {
+  list-style: none;
+  margin: 0 0 20px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+}
+
+.resumen li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 16px;
+  border-left: 1px solid var(--border);
+}
+
+.resumen li:first-child {
+  border-left: 0;
+}
+
+.resumenTitulo {
+  font-weight: 500;
+}
+
+.resumenCuenta {
+  grid-row: span 2;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.resumenTexto {
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+.resumen_disponible .resumenCuenta {
+  color: var(--pendiente-ink);
+}
+
+.resumen_asignado .resumenCuenta {
+  color: var(--asignado-ink);
+}
+
+.resumen_recogido .resumenCuenta {
+  color: var(--recogido-ink);
+}
+
+/* ── Búsqueda y filtro ── */
+.herramientas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.buscar {
+  position: relative;
+  flex: 0 1 320px;
+  color: var(--muted);
+}
+
+.buscar svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.buscar input {
+  padding-left: 40px;
+}
+
+.orden {
+  margin: 0 0 0 auto;
+}
+
+/* ── Panel y tabla ── */
+.panelCabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.panelCabecera p {
+  margin: 0;
+}
+
+.panelTitulo {
+  margin: 0;
+  font-size: var(--fs-section);
+}
+
+.panelTitulo .meta {
+  margin-left: 8px;
+  font-weight: 400;
+}
+
+.error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 12px 20px;
+  background: var(--negative-bg);
+  color: #7a1a12;
+  border-bottom: 1px solid #f4c7c3;
+}
+
+.error p {
+  margin: 0;
+}
+
+.marcoTabla {
+  overflow-x: auto;
+}
+
+.tabla {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tabla thead th {
+  padding: 10px 12px;
+  text-align: left;
+  font-size: var(--fs-small);
+  font-weight: 500;
+  color: var(--muted);
+  background: var(--raised);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.tabla td {
+  padding: 12px;
+  vertical-align: top;
+  border-bottom: 1px solid var(--rule);
+}
+
+.grupo th {
+  padding: 0;
+  background: var(--raised);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+.grupoBoton {
+  width: 100%;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-small);
+  text-align: left;
+  cursor: pointer;
+}
+
+.grupoBoton span {
+  color: var(--muted);
+}
+
+.grupoBoton strong {
+  white-space: nowrap;
+}
+
+.voluntario .sub,
+.hora .sub {
+  white-space: nowrap;
+}
+
+.girado {
+  transform: rotate(-90deg);
+}
+
+.pendiente td:first-child {
+  box-shadow: inset 3px 0 0 var(--pendiente-border);
+}
+
+.principal,
+.principalSuave,
+.sub {
+  display: block;
+}
+
+.principal {
+  font-weight: 600;
+}
+
+.sub {
+  margin-top: 2px;
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+.sinAsignar,
+.urgente {
+  display: block;
+  color: var(--pendiente-ink);
+  font-weight: 600;
+}
+
+.sub.urgente {
+  font-weight: 500;
+}
+
+.falta {
+  color: var(--faint);
+}
+
+.estado {
+  white-space: nowrap;
+}
+
+.acciones {
+  white-space: nowrap;
+}
+
+.acciones > * + * {
+  margin-left: 8px;
+}
+
+.vacio {
+  margin: 0;
+  padding: 32px 20px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.cargando {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+}
+
+.pieTabla {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 12px 16px;
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+.pieTabla p {
+  margin: 0;
+}
+
+.nota {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 0;
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+/* ── Teléfono: cada rescate es una tarjeta; ningún dato se pierde ── */
+@media (max-width: 760px) {
+  .fecha {
+    text-align: left;
+  }
+
+  .resumen {
+    grid-template-columns: 1fr;
+  }
+
+  .resumen li {
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .resumen li:first-child {
+    border-top: 0;
+  }
+
+  .buscar {
+    flex-basis: 100%;
+  }
+
+  .grupoBoton {
+    flex-wrap: wrap;
+    padding: 8px 12px;
+  }
+
+  .orden {
+    margin-left: 0;
+  }
+
+  .tabla thead {
+    display: none;
+  }
+
+  .tabla,
+  .tabla tbody {
+    display: block;
+  }
+
+  .grupo {
+    display: block;
+  }
+
+  .grupo th {
+    display: block;
+  }
+
+  .tabla tr:not(.grupo) {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "alimento estado"
+      "comercio comercio"
+      "destino destino"
+      "voluntario hora"
+      "acciones acciones";
+    gap: 6px 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .tabla td {
+    padding: 0;
+    border: 0;
+  }
+
+  .alimento {
+    grid-area: alimento;
+  }
+
+  .comercio {
+    grid-area: comercio;
+  }
+
+  .comercio::before {
+    content: "Comercio: ";
+    color: var(--muted);
+  }
+
+  .destino {
+    grid-area: destino;
+  }
+
+  .destino::before {
+    content: "Destino: ";
+    color: var(--muted);
+  }
+
+  .voluntario {
+    grid-area: voluntario;
+  }
+
+  .hora {
+    grid-area: hora;
+    text-align: right;
+  }
+
+  .estado {
+    grid-area: estado;
+  }
+
+  .acciones {
+    grid-area: acciones;
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .acciones > * + * {
+    margin-left: 0;
+  }
+
+  .acciones > * {
+    flex: 1;
+  }
+
+  .pendiente td:first-child {
+    box-shadow: none;
+  }
+
+  .pendiente {
+    box-shadow: inset 3px 0 0 var(--pendiente-border);
+  }
+}

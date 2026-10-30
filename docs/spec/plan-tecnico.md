@@ -50,6 +50,56 @@ Se descartan las siguientes alternativas:
   todas las rutas conozcan y respeten la misma clave de bloqueo; no sustituyen
   la integridad declarativa del `CHECK`.
 
+### Contrato API de asignación
+
+El endpoint `PATCH /api/v1/rescates/{id}/asignacion` está restringido al rol
+`fundacion`. Recibe `organizacion_id` y `voluntario_id` como UUID obligatorios.
+Valida la existencia de ambos recursos y que el voluntario esté activo. El
+usuario autenticado determina `asignado_por`; ese valor no forma parte del
+body.
+
+El `UPDATE` compare-and-set y la inserción en `rescate_historial` se ejecutan
+en la misma transacción. Una respuesta `200` devuelve el rescate en estado
+`asignado` junto con `organizacion_id`, `voluntario_id`, `asignado_en` y
+`asignado_por`. La respuesta `401` corresponde a autenticación ausente o
+inválida; `403`, a un rol distinto de `fundacion`; `404`, a un rescate,
+organización o voluntario inexistente; `409`, a un rescate que ya no está
+disponible; y `422`, a un body inválido.
+
+Los catálogos `GET /api/v1/organizaciones` y
+`GET /api/v1/voluntarios` también requieren `fundacion`. El primero expone
+solo `id`, `nombre`, `capacidad_kg`, `refrigeracion` y `horario_recepcion`. El
+segundo expone solo `id`, `nombre`, `medio_transporte` y `disponibilidad` de
+voluntarios activos. No se exponen correos, hashes de contraseñas ni otros
+datos personales innecesarios.
+
+### Consulta de rescates y seguimiento
+
+`GET /api/v1/rescates?estado=activos` requiere `fundacion` y exige el
+parámetro `estado=activos`. El filtro representa los estados
+`disponible`, `asignado` y `recogido`, y la respuesta se ordena por
+`hora_limite` ascendente. Cada elemento contiene los identificadores y
+nombres operativos de comercio, organización y voluntario, además del estado,
+la hora límite y `pendiente_asignar`. Este último es un campo derivado que vale
+`true` cuando el estado es `disponible`; no se persiste en la base de datos.
+
+`GET /api/v1/rescates/{id}` aplica autorización por propietario o asignación:
+fundación puede consultar cualquier rescate; un voluntario solo el rescate
+asignado a su usuario; una organización solo los rescates cuyo destino es la
+organización asociada a su usuario; y un comercio solo sus propios avisos.
+Tanto un identificador inexistente como un rescate existente sin permiso
+responden `404`, decisión adoptada para no revelar recursos a usuarios no
+autorizados.
+
+Las respuestas se filtran por rol. El voluntario asignado recibe los cuatro
+datos del traslado definidos en CA-02.3: `lugar_recogida`,
+`hora_limite`, `cantidad_aprox` y `lugar_entrega`. Este último se deriva de
+`organizaciones_receptoras.direccion`, porque el esquema de `rescates` no
+contiene una columna independiente para el lugar de entrega. Fundación recibe
+el detalle operativo completo; organización y comercio reciben únicamente los
+campos necesarios para seguimiento, sin credenciales, tokens, hashes ni datos
+personales innecesarios.
+
 ## Integraciones
 Debido al techo presupuestal y para minimizar dependencias que puedan generar fallos, el MVP se mantendrá con dependencias externas mínimas:
 - **Servicios de Identidad/Autenticación:** El sistema gestionará credenciales seguras de manera interna (usando tokens JWT desde FastAPI).

@@ -5,15 +5,20 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import aliased
 from sqlalchemy.orm import Session
 
 from app.deps import CurrentUser
 from app.models import (
     Comercio,
     IdempotencyKey,
+    OrganizacionReceptora,
     Rescate,
     RescateEstado,
     RescateHistorial,
+    Usuario,
+    UsuarioRol,
+    Voluntario,
 )
 from app.schemas.rescates import RescateCreate
 
@@ -25,7 +30,23 @@ class FieldValidationError(ValueError):
         self.message = message
 
 
-def asignar_rescate(
+class RescateNoEncontrado(LookupError):
+    pass
+
+
+class RecursoAsignacionNoEncontrado(LookupError):
+    def __init__(self, recurso: str):
+        super().__init__(recurso)
+        self.recurso = recurso
+
+
+class ConflictoAsignacion(RuntimeError):
+    def __init__(self, voluntario_nombre: str | None):
+        super().__init__()
+        self.voluntario_nombre = voluntario_nombre
+
+
+def _ejecutar_asignacion(
     db: Session,
     rescate_id: UUID,
     voluntario_id: UUID,
@@ -54,9 +75,203 @@ def asignar_rescate(
             "asignado_por": asignado_por,
         },
     )
-    asignacion_exitosa = result.scalar_one_or_none() is not None
+    return result.scalar_one_or_none() is not None
+
+
+def asignar_rescate(
+    db: Session,
+    rescate_id: UUID,
+    voluntario_id: UUID,
+    organizacion_id: UUID,
+    asignado_por: UUID,
+) -> bool:
+    asignacion_exitosa = _ejecutar_asignacion(
+        db, rescate_id, voluntario_id, organizacion_id, asignado_por
+    )
     db.commit()
     return asignacion_exitosa
+
+
+def asignar_rescate_con_historial(
+    db: Session,
+    rescate_id: UUID,
+    voluntario_id: UUID,
+    organizacion_id: UUID,
+    asignado_por: UUID,
+) -> Rescate:
+    if db.get(Rescate, rescate_id) is None:
+        raise RescateNoEncontrado
+    if db.get(OrganizacionReceptora, organizacion_id) is None:
+        raise RecursoAsignacionNoEncontrado("organizacion_id")
+    voluntario = db.scalar(
+        select(Usuario).join(Voluntario, Voluntario.usuario_id == Usuario.id).where(
+            Usuario.id == voluntario_id,
+            Usuario.rol == UsuarioRol.VOLUNTARIO,
+            Usuario.activo.is_(True),
+        )
+    )
+    if voluntario is None:
+        raise RecursoAsignacionNoEncontrado("voluntario_id")
+
+    try:
+        if not _ejecutar_asignacion(
+            db, rescate_id, voluntario_id, organizacion_id, asignado_por
+        ):
+            actual = db.execute(
+                select(Rescate, Usuario.nombre)
+                .outerjoin(Usuario, Usuario.id == Rescate.voluntario_id)
+                .where(Rescate.id == rescate_id)
+            ).one()
+            raise ConflictoAsignacion(actual.nombre)
+
+        db.add(
+            RescateHistorial(
+                rescate_id=rescate_id,
+                estado_anterior=RescateEstado.DISPONIBLE,
+                estado_nuevo=RescateEstado.ASIGNADO,
+                cambiado_por=asignado_por,
+            )
+        )
+        db.commit()
+        rescate = db.get(Rescate, rescate_id)
+        if rescate is None:
+            raise RuntimeError("La asignación no pudo recuperar el rescate")
+        return rescate
+    except Exception:
+        db.rollback()
+        raise
+
+
+def listar_rescates_activos(db: Session) -> list[dict]:
+    organizacion = aliased(OrganizacionReceptora)
+    voluntario = aliased(Usuario)
+    rows = db.execute(
+        select(
+            Rescate,
+            Comercio.nombre,
+            organizacion.nombre,
+            voluntario.nombre,
+        )
+        .join(Comercio, Comercio.id == Rescate.comercio_id)
+        .outerjoin(organizacion, organizacion.id == Rescate.organizacion_id)
+        .outerjoin(voluntario, voluntario.id == Rescate.voluntario_id)
+        .where(
+            Rescate.estado.in_(
+                (
+                    RescateEstado.DISPONIBLE,
+                    RescateEstado.ASIGNADO,
+                    RescateEstado.RECOGIDO,
+                )
+            )
+        )
+        .order_by(Rescate.hora_limite.asc())
+    ).all()
+    return [
+        {
+            "id": rescate.id,
+            "estado": rescate.estado,
+            "hora_limite": rescate.hora_limite,
+            "comercio": comercio_nombre,
+            "organizacion": organizacion_nombre,
+            "voluntario": voluntario_nombre,
+            "pendiente_asignar": rescate.estado == RescateEstado.DISPONIBLE,
+        }
+        for rescate, comercio_nombre, organizacion_nombre, voluntario_nombre in rows
+    ]
+
+
+def obtener_detalle_rescate(
+    db: Session, rescate_id: UUID, usuario: CurrentUser
+) -> dict | None:
+    organizacion = aliased(OrganizacionReceptora)
+    voluntario = aliased(Usuario)
+    row = db.execute(
+        select(
+            Rescate,
+            Comercio.nombre,
+            organizacion.nombre,
+            organizacion.direccion,
+            voluntario.nombre,
+            Usuario.organizacion_id,
+            Usuario.comercio_id,
+        )
+        .join(Comercio, Comercio.id == Rescate.comercio_id)
+        .outerjoin(organizacion, organizacion.id == Rescate.organizacion_id)
+        .outerjoin(voluntario, voluntario.id == Rescate.voluntario_id)
+        .join(Usuario, Usuario.id == usuario.usuario_id)
+        .where(Rescate.id == rescate_id)
+    ).one_or_none()
+    if row is None:
+        return None
+
+    (
+        rescate,
+        comercio_nombre,
+        organizacion_nombre,
+        lugar_entrega,
+        voluntario_nombre,
+        usuario_organizacion_id,
+        usuario_comercio_id,
+    ) = row
+    autorizado = usuario.rol == UsuarioRol.FUNDACION.value or (
+        usuario.rol == UsuarioRol.VOLUNTARIO.value
+        and rescate.voluntario_id == usuario.usuario_id
+    ) or (
+        usuario.rol == UsuarioRol.ORGANIZACION.value
+        and rescate.organizacion_id == usuario_organizacion_id
+    ) or (
+        usuario.rol == UsuarioRol.COMERCIO.value
+        and rescate.comercio_id == usuario_comercio_id
+    )
+    if not autorizado:
+        return None
+
+    detalle = {
+        "id": rescate.id,
+        "estado": rescate.estado,
+        "hora_limite": rescate.hora_limite,
+        "pendiente_asignar": rescate.estado == RescateEstado.DISPONIBLE,
+        "comercio": comercio_nombre,
+        "alimento": rescate.alimento,
+        "cantidad_aprox": rescate.cantidad_aprox,
+        "lugar_recogida": rescate.lugar_recogida,
+        "lugar_entrega": lugar_entrega,
+        "organizacion": organizacion_nombre,
+        "voluntario": voluntario_nombre,
+        "asignado_en": rescate.asignado_en,
+        "asignado_por": rescate.asignado_por,
+        "observaciones": rescate.observaciones,
+    }
+    if usuario.rol == UsuarioRol.FUNDACION.value:
+        return detalle
+    if usuario.rol == UsuarioRol.VOLUNTARIO.value:
+        return {
+            key: detalle[key]
+            for key in (
+                "id",
+                "estado",
+                "hora_limite",
+                "pendiente_asignar",
+                "cantidad_aprox",
+                "lugar_recogida",
+                "lugar_entrega",
+                "organizacion",
+                "voluntario",
+                "asignado_en",
+            )
+        }
+    return {
+        key: detalle[key]
+        for key in (
+            "id",
+            "estado",
+            "pendiente_asignar",
+            "comercio",
+            "organizacion",
+            "voluntario",
+            "asignado_en",
+        )
+    }
 
 
 def _request_hash(datos: RescateCreate) -> str:
