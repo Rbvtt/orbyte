@@ -1,0 +1,348 @@
+/* Colores del prototipo de #7 (docs/design/formulario-aviso). */
+.aviso {
+  --verde: #286247;
+  --verde-hover: #1f4f39;
+  --verde-texto: #356c52;
+  --verde-suave: #ecf3eb;
+  --tinta: #1d2b24;
+  --gris: #66706a;
+  --borde: #d5ddd5;
+  --rojo: #b3341f;
+  --rojo-suave: #fbeae5;
+  --crema: #f1efe3;
+
+  color: var(--tinta);
+}
+
+.titulo {
+  margin: 0;
+  font-size: 28px;
+  line-height: 34px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.lema {
+  margin: 6px 0 0;
+  color: var(--gris);
+  font-size: 16px;
+}
+
+.hoy {
+  margin: 8px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--verde-texto);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.hoy::first-letter {
+  text-transform: uppercase;
+}
+
+/* ── Banner de estado del formulario ── */
+.banner {
+  margin-top: 20px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--verde-suave);
+  color: var(--verde-texto);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.banner svg {
+  flex: none;
+  margin-top: 1px;
+}
+
+.banner p {
+  margin: 0;
+}
+
+.bannerTitulo {
+  font-weight: 700;
+}
+
+.bannerError {
+  background: var(--rojo-suave);
+  color: var(--rojo);
+}
+
+/* ── Campos ── */
+.form {
+  margin-top: 20px;
+  display: grid;
+  gap: 18px;
+}
+
+.campo {
+  display: grid;
+  gap: 6px;
+}
+
+.etiqueta {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.opcional {
+  font-weight: 400;
+  color: var(--gris);
+}
+
+.control {
+  position: relative;
+}
+
+.entrada {
+  width: 100%;
+  min-height: 52px;
+  padding: 12px 14px;
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  background: #ffffff;
+  color: var(--tinta);
+  font: inherit;
+  font-size: 16px;
+  resize: vertical;
+}
+
+.conIcono {
+  padding-right: 46px;
+}
+
+.entrada::placeholder {
+  color: #8a948e;
+}
+
+.entrada:focus-visible {
+  outline: 2px solid var(--verde);
+  outline-offset: 1px;
+  border-color: var(--verde);
+}
+
+.iconoCampo {
+  position: absolute;
+  right: 14px;
+  top: 16px;
+  color: var(--verde-texto);
+  pointer-events: none;
+}
+
+.conError .entrada {
+  border-color: var(--rojo);
+}
+
+.conError .iconoCampo {
+  color: var(--rojo);
+}
+
+/* El reloj propio del navegador ocupa el lugar del ícono del diseño. */
+.control input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  cursor: pointer;
+}
+
+.ayuda,
+.error {
+  margin: 0;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.ayuda {
+  color: var(--gris);
+}
+
+.error {
+  color: var(--rojo);
+  font-weight: 600;
+}
+
+/* ── Botón ── */
+.pie {
+  margin-top: 12px;
+  display: grid;
+  gap: 10px;
+  text-align: center;
+}
+
+.boton {
+  width: 100%;
+  min-height: 54px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--verde);
+  color: #ffffff;
+  font: inherit;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.boton:hover {
+  background: var(--verde-hover);
+}
+
+.boton:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+.nota {
+  margin: 0;
+  color: var(--gris);
+  font-size: 13px;
+}
+
+/* ── Confirmación ── */
+.exito {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+}
+
+.check {
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--verde-suave);
+  color: var(--verde);
+}
+
+.exitoTitulo {
+  margin: 16px 0 0;
+  font-size: 28px;
+  line-height: 34px;
+  font-weight: 700;
+}
+
+.exitoTitulo:focus {
+  outline: none;
+}
+
+.exitoTexto {
+  margin: 8px 0 0;
+  max-width: 300px;
+  color: var(--gris);
+}
+
+.estado {
+  margin-top: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--verde-suave);
+  color: var(--verde-texto);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.codigo {
+  margin: 10px 0 0;
+  color: var(--gris);
+  font-size: 13px;
+}
+
+.codigo span {
+  display: block;
+  color: var(--tinta);
+  font-weight: 700;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.resumen {
+  margin-top: 20px;
+  width: 100%;
+  padding: 16px;
+  border: 1px solid var(--borde);
+  border-radius: 14px;
+  background: #ffffff;
+  text-align: left;
+}
+
+.resumenTitulo {
+  margin: 0 0 4px;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.resumen dl {
+  margin: 0;
+}
+
+.fila {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  column-gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--borde);
+}
+
+.fila:last-child {
+  border-bottom: 0;
+}
+
+.fila dt {
+  grid-column: 2;
+  color: var(--gris);
+  font-size: 13px;
+}
+
+.fila dd {
+  grid-column: 2;
+  margin: 2px 0 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.filaIcono {
+  grid-row: span 2;
+  color: var(--verde-texto);
+  margin-top: 2px;
+}
+
+.registro {
+  margin-top: 14px;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--crema);
+  text-align: left;
+}
+
+.registro p {
+  margin: 0;
+  color: var(--gris);
+  font-size: 13px;
+}
+
+.registro strong {
+  display: block;
+  margin-top: 2px;
+  color: var(--tinta);
+  font-size: 15px;
+}
+
+.gracias {
+  margin: 28px 0 12px;
+  color: var(--gris);
+}

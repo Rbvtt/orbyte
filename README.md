@@ -35,6 +35,23 @@ Para correr las pruebas, desde `src/backend` y con el entorno virtual activo:
 python -m pytest -v
 ```
 
+### Frontend
+
+```powershell
+cd src/frontend
+npm install
+npm run dev
+```
+
+La aplicación queda en `http://localhost:5173` (el origen que ya permite `CORS_ORIGINS`) y toma la URL de la API de `VITE_API_URL` en el `.env` de la raíz.
+
+Mientras no exista la pantalla de inicio de sesión, para probar se guarda en el navegador (consola de las herramientas de desarrollador) el token del login del rol que se quiere probar. El formulario de aviso además necesita el comercio del usuario, que la API todavía no expone:
+
+```js
+localStorage.setItem("rescate.token", "<access_token>");
+localStorage.setItem("rescate.comercio_id", "<id del comercio del usuario>");
+```
+
 ## Autenticación y permisos
 
 Para obtener un token, envía el correo y la contraseña a `POST /api/v1/auth/login`:
@@ -146,6 +163,30 @@ python -m scripts.seed_dev_usuarios
 ```
 
 Los tests que necesitan PostgreSQL se ejecutan únicamente si se define `TEST_DATABASE_URL` (por ejemplo, en `.env`); si no está definida, pytest los marca como omitidos. SQLite no es compatible con el esquema PostgreSQL.
+
+## Prototipos de experiencia de usuario
+
+### Descripción
+Esta rama contiene la documentación visual y los prototipos de diseño desarrollados para las historias de UX del proyecto Orbyte. La finalidad es dejar evidencia del diseño propuesto antes de pasar a la implementación en frontend.
+
+### Contenido de la rama
+Actualmente esta rama incluye prototipos relacionados con:
+- formulario de aviso de alimento disponible
+- vista de rescates activos para la fundación
+- evidencia de estados, validaciones y comportamiento visual
+
+### Estructura
+```text
+docs/
+├── design/
+│   ├── formulario-aviso/
+│   │   ├── README.md
+│   │   └── prototipo-formulario-aviso-360.png
+│   └── rescates-activos/
+│       ├── README.md
+│       ├── rescates-activos-desktop.jpg
+│       └── rescates-activos-mobile.jpg
+```
 
 ## Documentación
 
