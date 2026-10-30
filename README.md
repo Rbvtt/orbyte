@@ -50,6 +50,8 @@ Para crear una migración nueva: `alembic revision -m "descripcion"`. Se escribe
 
 ## Uso de asistentes de IA
 
+Se utilizó Codex para acompañar la creación inicial del repositorio y la organización de su documentación. El equipo revisa y valida cada cambio antes de incorporarlo al proyecto.
+
 El detalle de herramientas y usos conocidos está en [USO_IA.md](USO_IA.md).
 
 ## Preparación y seguimiento
@@ -57,4 +59,3 @@ El detalle de herramientas y usos conocidos está en [USO_IA.md](USO_IA.md).
 - [Datos representativos y casos para CMP-02](docs/datos/cmp02/README.md).
 - [Revisión del PO y pendientes de aceptación](docs/seguimiento/revision-po-2026-10-29.md).
 
-Se utilizó Codex para acompañar la creación inicial del repositorio y la organización de su documentación. El equipo revisa y valida cada cambio antes de incorporarlo al proyecto.
