@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 
 from app.config import get_settings
 from app.routers.auth import router as auth_router
+from app.routers.catalogos import router as catalogos_router
 from app.routers.rescates import router as rescates_router
 from app.services.rescates import FieldValidationError
 
@@ -21,6 +22,7 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)
+app.include_router(catalogos_router)
 app.include_router(rescates_router)
 
 

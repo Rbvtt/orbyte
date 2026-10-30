@@ -49,3 +49,38 @@ class RescateOut(BaseModel):
     estado: RescateEstado
     registrado_por: UUID
     creado_en: datetime
+
+
+class RescateAsignacionIn(BaseModel):
+    organizacion_id: UUID
+    voluntario_id: UUID
+
+
+class RescateAsignacionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    estado: RescateEstado
+    organizacion_id: UUID
+    voluntario_id: UUID
+    asignado_en: datetime
+    asignado_por: UUID
+
+
+class OrganizacionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    nombre: str
+    capacidad_kg: float | None
+    refrigeracion: bool
+    horario_recepcion: str | None
+
+
+class VoluntarioOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    nombre: str
+    medio_transporte: str | None
+    disponibilidad: str | None

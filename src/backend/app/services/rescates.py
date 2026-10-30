@@ -11,9 +11,13 @@ from app.deps import CurrentUser
 from app.models import (
     Comercio,
     IdempotencyKey,
+    OrganizacionReceptora,
     Rescate,
     RescateEstado,
     RescateHistorial,
+    Usuario,
+    UsuarioRol,
+    Voluntario,
 )
 from app.schemas.rescates import RescateCreate
 
@@ -25,7 +29,23 @@ class FieldValidationError(ValueError):
         self.message = message
 
 
-def asignar_rescate(
+class RescateNoEncontrado(LookupError):
+    pass
+
+
+class RecursoAsignacionNoEncontrado(LookupError):
+    def __init__(self, recurso: str):
+        super().__init__(recurso)
+        self.recurso = recurso
+
+
+class ConflictoAsignacion(RuntimeError):
+    def __init__(self, voluntario_nombre: str | None):
+        super().__init__()
+        self.voluntario_nombre = voluntario_nombre
+
+
+def _ejecutar_asignacion(
     db: Session,
     rescate_id: UUID,
     voluntario_id: UUID,
@@ -54,9 +74,71 @@ def asignar_rescate(
             "asignado_por": asignado_por,
         },
     )
-    asignacion_exitosa = result.scalar_one_or_none() is not None
+    return result.scalar_one_or_none() is not None
+
+
+def asignar_rescate(
+    db: Session,
+    rescate_id: UUID,
+    voluntario_id: UUID,
+    organizacion_id: UUID,
+    asignado_por: UUID,
+) -> bool:
+    asignacion_exitosa = _ejecutar_asignacion(
+        db, rescate_id, voluntario_id, organizacion_id, asignado_por
+    )
     db.commit()
     return asignacion_exitosa
+
+
+def asignar_rescate_con_historial(
+    db: Session,
+    rescate_id: UUID,
+    voluntario_id: UUID,
+    organizacion_id: UUID,
+    asignado_por: UUID,
+) -> Rescate:
+    if db.get(Rescate, rescate_id) is None:
+        raise RescateNoEncontrado
+    if db.get(OrganizacionReceptora, organizacion_id) is None:
+        raise RecursoAsignacionNoEncontrado("organizacion_id")
+    voluntario = db.scalar(
+        select(Usuario).join(Voluntario, Voluntario.usuario_id == Usuario.id).where(
+            Usuario.id == voluntario_id,
+            Usuario.rol == UsuarioRol.VOLUNTARIO,
+            Usuario.activo.is_(True),
+        )
+    )
+    if voluntario is None:
+        raise RecursoAsignacionNoEncontrado("voluntario_id")
+
+    try:
+        if not _ejecutar_asignacion(
+            db, rescate_id, voluntario_id, organizacion_id, asignado_por
+        ):
+            actual = db.execute(
+                select(Rescate, Usuario.nombre)
+                .outerjoin(Usuario, Usuario.id == Rescate.voluntario_id)
+                .where(Rescate.id == rescate_id)
+            ).one()
+            raise ConflictoAsignacion(actual.nombre)
+
+        db.add(
+            RescateHistorial(
+                rescate_id=rescate_id,
+                estado_anterior=RescateEstado.DISPONIBLE,
+                estado_nuevo=RescateEstado.ASIGNADO,
+                cambiado_por=asignado_por,
+            )
+        )
+        db.commit()
+        rescate = db.get(Rescate, rescate_id)
+        if rescate is None:
+            raise RuntimeError("La asignación no pudo recuperar el rescate")
+        return rescate
+    except Exception:
+        db.rollback()
+        raise
 
 
 def _request_hash(datos: RescateCreate) -> str:
