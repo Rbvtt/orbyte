@@ -2,6 +2,12 @@
 
 ## CMP-01 · Se registra un aviso de alimento disponible
 
+La API implementa este flujo en `POST /api/v1/rescates`. La solicitud requiere
+un `comercio_id`, alimento, cantidad aproximada, lugar de recogida y una
+`hora_limite` con zona horaria. El servidor asigna el estado `disponible`, la
+fecha de creación y el usuario que registra el aviso, y guarda el primer
+cambio en el historial.
+
 **Origen:** RF-001 · RNF-001 · RNF-002 · RNF-004
 
 ### CA-01.1 · Aviso con los datos mínimos

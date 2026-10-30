@@ -21,6 +21,10 @@ Para garantizar la trazabilidad exigida por el caso y evitar el doble conteo de 
   - *Asociaciones:* Fecha y hora de creación, quién registró (comercio o fundación asistida), voluntario asignado, y organización receptora.
 - **Reporte / Impacto:** Una vista o tabla consolidada que suma los kilogramos recibidos y personas beneficiadas por periodo, filtrando estrictamente los rescates en estado `entregado`.
 
+La migración inicial se complementa con una segunda migración que relaciona
+usuarios de rol comercio con `comercios`, registra `rescate_historial` y
+persiste claves `Idempotency-Key` para evitar avisos duplicados.
+
 ## Integraciones
 Debido al techo presupuestal y para minimizar dependencias que puedan generar fallos, el MVP se mantendrá con dependencias externas mínimas:
 - **Servicios de Identidad/Autenticación:** El sistema gestionará credenciales seguras de manera interna (usando tokens JWT desde FastAPI).

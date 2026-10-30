@@ -4,3 +4,8 @@ pydantic-settings==2.16.1
 SQLAlchemy==2.1.6
 alembic==1.20.1
 psycopg[binary]==3.3.6
+pyjwt
+argon2-cffi
+email-validator
+pytest
+httpx
