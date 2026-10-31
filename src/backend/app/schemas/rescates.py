@@ -6,6 +6,15 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.models import RescateEstado
 
 
+class ComercioOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    nombre: str
+    direccion: str
+    telefono: str | None
+
+
 class RescateCreate(BaseModel):
     comercio_id: UUID
     alimento: str = Field(min_length=1)

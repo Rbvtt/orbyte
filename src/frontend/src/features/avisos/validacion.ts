@@ -60,9 +60,16 @@ export function aLocalBogota(fecha: Date): string {
   return new Date(fecha.getTime() + MS_BOGOTA).toISOString().slice(0, 16);
 }
 
-export function validarAviso(form: FormularioAviso, ahora: Date = new Date()): ErroresAviso {
+export function validarAviso(
+  form: FormularioAviso,
+  ahora: Date = new Date(),
+  requiereComercio = true,
+): ErroresAviso {
   const errores: ErroresAviso = {};
-  for (const campo of ["comercio", "alimento", "cantidad_aprox", "lugar_recogida"] as const) {
+  if (requiereComercio && !form.comercio.trim()) {
+    errores.comercio = MENSAJES_FALTANTE.comercio;
+  }
+  for (const campo of ["alimento", "cantidad_aprox", "lugar_recogida"] as const) {
     if (!form[campo].trim()) errores[campo] = MENSAJES_FALTANTE[campo];
   }
   if (!form.hora_limite) {

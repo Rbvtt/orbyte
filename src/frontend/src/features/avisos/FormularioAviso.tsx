@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import Link from "next/link";
 import {
   IconoAlerta,
   IconoBalanza,
@@ -16,7 +17,9 @@ import {
   IconoUbicacion,
 } from "@/components/ui/Iconos";
 import { dia, fechaCorta, fechaLarga, hora24 } from "@/features/rescates/tiempo";
-import { leerComercioId } from "@/services/api/sesion";
+import { ApiError } from "@/services/api/client";
+import { sesionApi } from "@/services/api/sesionApi";
+import type { Comercio, UsuarioSesion } from "@/types/api";
 import type { RescateCreado } from "@/types/avisos";
 import styles from "./FormularioAviso.module.css";
 import { useRegistrarAviso } from "./useRegistrarAviso";
@@ -41,10 +44,41 @@ type Icono = (p: { className?: string; tamano?: number }) => React.ReactNode;
 export function FormularioAviso() {
   const { estado, enviar, reiniciar, fallar } = useRegistrarAviso();
   const [form, setForm] = useState<Formulario>(FORMULARIO_VACIO);
+  const [usuario, setUsuario] = useState<UsuarioSesion | null>(null);
+  const [comercios, setComercios] = useState<Comercio[]>([]);
+  const [comercioId, setComercioId] = useState<string | null>(null);
+  const [cargandoSesion, setCargandoSesion] = useState(true);
+  const [errorSesion, setErrorSesion] = useState("");
   const [errores, setErrores] = useState<ErroresAviso>({});
   const [intentado, setIntentado] = useState(false);
   const refs = useRef<Partial<Record<CampoAviso, HTMLElement | null>>>({});
   const ahora = new Date();
+
+  useEffect(() => {
+    let activo = true;
+    async function cargarSesion() {
+      try {
+        const actual = await sesionApi.me();
+        if (!activo) return;
+        setUsuario(actual);
+        if (actual.rol === "comercio") {
+          setComercioId(actual.comercio_id);
+          setForm((actualForm) => ({ ...actualForm, comercio: actual.comercio_nombre ?? "" }));
+        } else if (actual.rol === "fundacion") {
+          setComercios(await sesionApi.comercios());
+        }
+      } catch (error) {
+        if (!activo) return;
+        setErrorSesion(error instanceof ApiError ? error.message : "No se pudo cargar la sesión.");
+      } finally {
+        if (activo) setCargandoSesion(false);
+      }
+    }
+    void cargarSesion();
+    return () => {
+      activo = false;
+    };
+  }, []);
 
   function cambiar(campo: CampoAviso, valor: string) {
     setForm((f) => ({ ...f, [campo]: valor }));
@@ -59,16 +93,18 @@ export function FormularioAviso() {
   async function alEnviar(evento: React.FormEvent) {
     evento.preventDefault();
     setIntentado(true);
-    const encontrados = validarAviso(form, new Date());
+    const encontrados = validarAviso(form, new Date(), usuario?.rol === "fundacion");
     setErrores(encontrados);
     if (primerCampoConError(encontrados)) {
       enfocarPrimero(encontrados);
       return;
     }
-    const comercioId = leerComercioId();
     if (!comercioId) {
-      // TODO(#40): cuando la API exponga el comercio del usuario, este caso solo pasa sin sesión.
-      fallar("No encontramos el comercio de tu usuario. Vuelve a iniciar sesión.");
+      fallar(
+        usuario?.rol === "comercio"
+          ? "Tu cuenta no tiene un comercio asociado. Contacta con la fundación para vincularlo."
+          : "Selecciona un comercio antes de registrar el aviso.",
+      );
       return;
     }
     const resultado = await enviar(aPayload(form, comercioId));
@@ -80,22 +116,42 @@ export function FormularioAviso() {
 
   if (estado.tipo === "exito") {
     return (
-      <Confirmacion
-        rescate={estado.rescate}
-        comercio={form.comercio.trim()}
-        otro={() => {
-          setForm(FORMULARIO_VACIO);
-          setErrores({});
-          setIntentado(false);
-          reiniciar();
-        }}
-      />
+      <>
+        {usuario?.rol === "fundacion" && (
+          <Link href="/fundacion/rescates" className={`btn btn--secondary btn--compact ${styles.volver}`}>
+            Volver a rescates
+          </Link>
+        )}
+        <Confirmacion
+          rescate={estado.rescate}
+          comercio={form.comercio.trim()}
+          otro={() => {
+            setForm(FORMULARIO_VACIO);
+            setErrores({});
+            setIntentado(false);
+            reiniciar();
+          }}
+        />
+      </>
+    );
+  }
+
+  if (cargandoSesion) {
+    return <p role="status">Cargando tu sesión…</p>;
+  }
+
+  if (errorSesion || !usuario) {
+    return (
+      <div role="alert">
+        <p>{errorSesion || "Tu sesión no está disponible."}</p>
+        <a href="/login">Volver a iniciar sesión</a>
+      </div>
     );
   }
 
   const enviando = estado.tipo === "enviando";
   const pendientes = Object.values(errores).filter(Boolean).length;
-  const completo = !primerCampoConError(validarAviso(form, ahora));
+  const completo = !primerCampoConError(validarAviso(form, ahora, usuario.rol === "fundacion"));
 
   let aviso: { tipo: "error" | "info"; titulo: string; texto: string };
   if (estado.tipo === "error" && estado.mensaje) {
@@ -118,6 +174,11 @@ export function FormularioAviso() {
 
   return (
     <div className={styles.aviso}>
+      {usuario.rol === "fundacion" && (
+        <Link href="/fundacion/rescates" className={`btn btn--secondary btn--compact ${styles.volver}`}>
+          Volver a rescates
+        </Link>
+      )}
       <h1 className={styles.titulo}>Aviso de donación</h1>
       <p className={styles.lema}>Lo que te sobra puede hacer mucho.</p>
       <p className={styles.hoy}>
@@ -134,16 +195,29 @@ export function FormularioAviso() {
       </div>
 
       <form className={styles.form} onSubmit={alEnviar} noValidate>
-        <Campo etiqueta="Comercio" ayuda="El nombre de tu establecimiento." error={errores.comercio} icono={IconoTienda}>
-          {(props) => (
+        <Campo etiqueta="Comercio" ayuda={usuario.rol === "fundacion" ? "Selecciona el establecimiento que avisó." : "Se completa con el comercio vinculado a tu cuenta."} error={errores.comercio} icono={IconoTienda}>
+          {(props) => usuario.rol === "fundacion" ? (
+            <select
+              {...props}
+              ref={ref("comercio")}
+              value={comercioId ?? ""}
+              onChange={(e) => {
+                const seleccionado = comercios.find((comercio) => comercio.id === e.target.value);
+                setComercioId(seleccionado?.id ?? null);
+                cambiar("comercio", seleccionado?.nombre ?? "");
+              }}
+            >
+              <option value="">Selecciona un comercio</option>
+              {comercios.map((comercio) => <option key={comercio.id} value={comercio.id}>{comercio.nombre}</option>)}
+            </select>
+          ) : (
             <input
               {...props}
               ref={ref("comercio")}
               type="text"
               autoComplete="organization"
-              placeholder="Nombre del comercio"
-              value={form.comercio}
-              onChange={(e) => cambiar("comercio", e.target.value)}
+              value={usuario.comercio_nombre ?? form.comercio}
+              readOnly
             />
           )}
         </Campo>

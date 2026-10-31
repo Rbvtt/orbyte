@@ -149,6 +149,7 @@ def consulta_data(real_db):
         usuario_comercio=usuario_comercio,
         usuario_otro_comercio=usuario_otro_comercio,
         organizacion=organizacion,
+        disponible=disponible,
         asignado=asignado,
         activo_ids={disponible.id, asignado.id, recogido.id},
         inactivo_ids={entregado.id, no_completado.id},
@@ -188,6 +189,22 @@ def test_listado_activos_ordenado_y_con_pendiente(api_client, consulta_data):
     asignados = [item for item in selected if item["estado"] != "disponible"]
     assert disponible["pendiente_asignar"] is True
     assert all(item["pendiente_asignar"] is False for item in asignados)
+
+
+def test_listado_no_marca_rescate_vencido_como_pendiente(api_client, consulta_data):
+    rescate = consulta_data.db.get(Rescate, consulta_data.disponible.id)
+    rescate.hora_limite = datetime.now(timezone.utc) - timedelta(minutes=1)
+    consulta_data.db.commit()
+
+    response = api_client.get(
+        "/api/v1/rescates?estado=activos",
+        headers=_headers(consulta_data.fundacion),
+    )
+
+    assert response.status_code == 200
+    item = next(row for row in response.json() if row["id"] == str(rescate.id))
+    assert item["estado"] == "disponible"
+    assert item["pendiente_asignar"] is False
 
 
 @pytest.mark.parametrize("query", ["/api/v1/rescates", "/api/v1/rescates?estado=invalid"])

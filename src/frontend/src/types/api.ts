@@ -10,3 +10,21 @@ export interface ErrorCampo {
   campo: string;
   mensaje: string;
 }
+
+export type RolUsuario = "fundacion" | "comercio" | "voluntario" | "organizacion";
+
+export interface UsuarioSesion {
+  id: string;
+  nombre: string;
+  email: string;
+  rol: RolUsuario;
+  comercio_id: string | null;
+  comercio_nombre: string | null;
+}
+
+export interface Comercio {
+  id: string;
+  nombre: string;
+  direccion: string;
+  telefono: string | null;
+}

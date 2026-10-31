@@ -1,5 +1,6 @@
 import hashlib
 import json
+from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -65,6 +66,7 @@ def _ejecutar_asignacion(
             WHERE id = :rescate_id
               AND estado = 'disponible'
               AND voluntario_id IS NULL
+              AND hora_limite > now()
             RETURNING id
             """
         ),
@@ -174,7 +176,10 @@ def listar_rescates_activos(db: Session) -> list[dict]:
             "comercio": comercio_nombre,
             "organizacion": organizacion_nombre,
             "voluntario": voluntario_nombre,
-            "pendiente_asignar": rescate.estado == RescateEstado.DISPONIBLE,
+            "pendiente_asignar": (
+                rescate.estado == RescateEstado.DISPONIBLE
+                and rescate.hora_limite > datetime.now(timezone.utc)
+            ),
         }
         for rescate, comercio_nombre, organizacion_nombre, voluntario_nombre in rows
     ]

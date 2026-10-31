@@ -4,7 +4,8 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Usuario
+from app.deps import CurrentUser, get_current_user
+from app.models import Comercio, Usuario
 from app.security import create_access_token, hash_password, verify_password
 
 
@@ -27,6 +28,15 @@ class TokenOut(BaseModel):
     token_type: str = "bearer"
 
 
+class UsuarioSesionOut(BaseModel):
+    id: str
+    nombre: str
+    email: EmailStr
+    rol: str
+    comercio_id: str | None = None
+    comercio_nombre: str | None = None
+
+
 def _invalid_credentials() -> HTTPException:
     return HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -47,3 +57,25 @@ def login(data: LoginIn, db: Session = Depends(get_db)) -> TokenOut:
 
     access_token = create_access_token(sub=str(usuario.id), rol=usuario.rol.value)
     return TokenOut(access_token=access_token)
+
+
+@router.get("/me", response_model=UsuarioSesionOut)
+def current_session(
+    current_user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> UsuarioSesionOut:
+    usuario = db.get(Usuario, current_user.usuario_id)
+    if usuario is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No autorizado",
+        )
+    comercio = db.get(Comercio, usuario.comercio_id) if usuario.comercio_id else None
+    return UsuarioSesionOut(
+        id=str(usuario.id),
+        nombre=usuario.nombre,
+        email=usuario.email,
+        rol=usuario.rol.value,
+        comercio_id=str(usuario.comercio_id) if usuario.comercio_id else None,
+        comercio_nombre=comercio.nombre if comercio else None,
+    )

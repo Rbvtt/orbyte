@@ -29,7 +29,7 @@ El esquema integrado por el PR #65 contiene `usuarios`, `comercios`, `organizaci
 
 | Entidad o campos | Uso y criterio | Estado al 29-10-2026 |
 |---|---|---|
-| `rescates`: comercio, alimento, cantidad aproximada, lugar y hora límite; `registrado_por`, `creado_en` | CA-01.1 y CA-01.3; identidad del comercio y del actor que registra | Columnas integradas; API y formulario pendientes de integración |
+| `rescates`: comercio, alimento, cantidad aproximada, lugar y hora límite; `registrado_por`, `creado_en` | CA-01.1 y CA-01.3; identidad del comercio y del actor que registra | Columnas, API y formulario integrados |
 | `organizaciones_receptoras`: capacidad, refrigeración, horario, puede recoger | RF-002 y CA-02.1; elegir destino adecuado | Tabla integrada; datos representativos en `docs/datos/cmp02/` |
 | `voluntarios`: usuario, transporte y disponibilidad | RF-006 y CA-02.1/CA-02.3 | Tabla integrada; datos representativos preparados |
 | `organizacion_id`, `voluntario_id`, `asignado_en`, `asignado_por` | CA-02.1; destino, traslado y responsable de asignación | Columnas integradas; operación atómica pendiente (#11) |
@@ -37,7 +37,7 @@ El esquema integrado por el PR #65 contiene `usuarios`, `comercios`, `organizaci
 | `motivo_no_completado` | CA-03.4; explicación del cierre sin entrega | Columna y CHECK de no nulo integrados |
 | `historial_estados` | CA-03.3, RF-014, RF-015, RNF-011 | Diseño pendiente de implementación en #35 |
 
-La organización es la entidad receptora (`rescates.organizacion_id`); quien recibe es una persona autenticada (`rescates.recibido_por` → `usuarios.id`). No son intercambiables. La API debe comprobar que el usuario pertenece a la organización destino. `usuarios.organizacion_id` expresa esa relación. La relación usuario–comercio todavía debe definirse e implementarse en #40/#58: no se debe confiar en un `comercio_id` arbitrario enviado por el cliente.
+La organización es la entidad receptora (`rescates.organizacion_id`); quien recibe es una persona autenticada (`rescates.recibido_por` → `usuarios.id`). No son intercambiables. La API debe comprobar que el usuario pertenece a la organización destino. `usuarios.organizacion_id` expresa esa relación. La relación usuario–comercio se implementa mediante `usuarios.comercio_id`; la API expone la asociación en `/auth/me` y solo permite al rol comercio registrar para su propio comercio.
 
 El esquema inicial no impone todas las reglas de negocio. Por ejemplo, los campos de recepción existentes no sustituyen la validación de estado previo, pertenencia al destino, unidad, condición medida/estimada y fecha de entrega exigida por CA-04.2 y CA-04.4.
 

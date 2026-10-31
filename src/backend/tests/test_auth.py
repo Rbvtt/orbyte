@@ -21,6 +21,9 @@ class FakeSession:
     def scalar(self, _statement):
         return self.user
 
+    def get(self, _model, _identifier):
+        return self.user
+
 
 def make_user(
     *,
@@ -31,9 +34,11 @@ def make_user(
 ):
     return SimpleNamespace(
         id=uuid4(),
+        nombre="Usuario de prueba",
         email=email,
         password_hash=hash_password(password),
         rol=rol,
+        comercio_id=None,
         activo=activo,
     )
 
@@ -79,6 +84,27 @@ def test_login_correcto_devuelve_token(client):
     assert payload["rol"] == "fundacion"
     assert isinstance(payload["exp"], int)
     assert set(body) == {"access_token", "token_type"}
+
+
+def test_sesion_actual_devuelve_rol_y_comercio(client):
+    test_client, fake_session = client
+    user = make_user()
+    fake_session.user = user
+
+    response = test_client.get(
+        "/api/v1/auth/me",
+        headers=auth_header(create_access_token(sub=str(user.id), rol=user.rol.value)),
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "id": str(user.id),
+        "nombre": user.nombre,
+        "email": user.email,
+        "rol": "fundacion",
+        "comercio_id": None,
+        "comercio_nombre": None,
+    }
 
 
 @pytest.mark.parametrize(

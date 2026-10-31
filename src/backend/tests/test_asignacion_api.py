@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -68,7 +68,7 @@ def asignacion_data(real_db):
         alimento="Pan",
         cantidad_aprox="20 unidades",
         lugar_recogida="Calle 1",
-        hora_limite=datetime(2026, 10, 28, 23, 0, tzinfo=timezone.utc),
+        hora_limite=datetime.now(timezone.utc) + timedelta(days=1),
         registrado_por=fundacion.id,
         estado=RescateEstado.DISPONIBLE,
     )
@@ -132,6 +132,29 @@ def test_patch_asigna_y_registra_historial(api_client, asignacion_data):
     assert historial[0].estado_anterior == RescateEstado.DISPONIBLE
     assert historial[0].estado_nuevo == RescateEstado.ASIGNADO
     assert historial[0].cambiado_por == asignacion_data.fundacion.id
+
+
+def test_patch_rechaza_rescate_vencido(api_client, asignacion_data):
+    asignacion_data.rescate.hora_limite = datetime.now(timezone.utc) - timedelta(minutes=1)
+    asignacion_data.db.commit()
+
+    response = api_client.patch(
+        f"/api/v1/rescates/{asignacion_data.rescate.id}/asignacion",
+        headers=_headers(asignacion_data.fundacion),
+        json=_payload(asignacion_data),
+    )
+
+    assert response.status_code == 409
+    assert "no está disponible" in response.json()["detail"]
+    asignacion_data.db.expire_all()
+    rescate = asignacion_data.db.get(Rescate, asignacion_data.rescate.id)
+    assert rescate.estado == RescateEstado.DISPONIBLE
+    assert rescate.voluntario_id is None
+    assert not asignacion_data.db.scalars(
+        select(RescateHistorial).where(
+            RescateHistorial.rescate_id == asignacion_data.rescate.id
+        )
+    ).all()
 
 
 def test_patch_en_conflicto_devuelve_nombre_y_no_cambia_fila(

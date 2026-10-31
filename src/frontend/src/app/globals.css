@@ -394,6 +394,11 @@ textarea {
   border-color: var(--pendiente-border);
 }
 
+.pill--no_disponible {
+  background: var(--negative-bg);
+  color: var(--negative);
+}
+
 .pill--asignado {
   background: var(--asignado-bg);
   color: var(--asignado-ink);

@@ -2,7 +2,7 @@ import os
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from threading import Barrier
 from uuid import uuid4
@@ -58,7 +58,7 @@ def _crear_rescate_y_datos(real_db: Session, cantidad_voluntarios: int = 1):
         alimento="Pan",
         cantidad_aprox="20 unidades",
         lugar_recogida="Calle 1",
-        hora_limite=datetime(2026, 10, 28, 23, 0, tzinfo=timezone.utc),
+        hora_limite=datetime.now(timezone.utc) + timedelta(days=1),
         registrado_por=fundacion.id,
         estado=RescateEstado.DISPONIBLE,
     )

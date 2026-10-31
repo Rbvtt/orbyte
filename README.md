@@ -45,12 +45,11 @@ npm run dev
 
 La aplicación queda en `http://localhost:5173` (el origen que ya permite `CORS_ORIGINS`) y toma la URL de la API de `VITE_API_URL` en el `.env` de la raíz.
 
-Mientras no exista la pantalla de inicio de sesión, para probar se guarda en el navegador (consola de las herramientas de desarrollador) el token del login del rol que se quiere probar. El formulario de aviso además necesita el comercio del usuario, que la API todavía no expone:
-
-```js
-localStorage.setItem("rescate.token", "<access_token>");
-localStorage.setItem("rescate.comercio_id", "<id del comercio del usuario>");
-```
+Abre `http://localhost:5173/` para iniciar sesión. La aplicación guarda el
+token de forma local y obtiene el comercio asociado desde `GET /api/v1/auth/me`.
+Los usuarios de fundación seleccionan el comercio desde `GET /api/v1/comercios`;
+los usuarios comercio solo pueden registrar avisos para el comercio asociado a
+su cuenta.
 
 ## Autenticación y permisos
 
@@ -72,6 +71,10 @@ Authorization: Bearer <access_token>
 Un `401` significa que falta el token, es inválido, expiró o las credenciales no son válidas. Un `403` significa que el token es válido, pero el rol no tiene permiso para el endpoint.
 
 `JWT_SECRET` es el secreto usado para firmar los tokens y no debe estar vacío ni publicarse. `JWT_EXPIRES_MIN` define su duración en minutos.
+
+`GET /api/v1/auth/me` devuelve la identidad, el rol y, si existe, el comercio
+asociado. `GET /api/v1/comercios` requiere rol `fundacion` y devuelve los
+comercios disponibles para registrar avisos.
 
 ### Registro de rescates
 
@@ -267,4 +270,3 @@ El detalle de herramientas y usos conocidos está en [USO_IA.md](USO_IA.md).
 
 - [Datos representativos y casos para CMP-02](docs/datos/cmp02/README.md).
 - [Revisión del PO y pendientes de aceptación](docs/seguimiento/revision-po-2026-10-29.md).
-

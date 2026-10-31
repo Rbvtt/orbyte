@@ -4,17 +4,18 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { IconoBuscar, IconoCalendario, IconoChevron, IconoInfo } from "@/components/ui/Iconos";
 import { StatusPill } from "@/components/ui/StatusPill";
-import type { EstadoRescate } from "@/types/api";
 import {
   agrupar,
   contar,
   detalleHora,
   detalleVoluntario,
+  estadoVisible,
   ESTADOS_ACTIVOS,
   filtrar,
   GRUPO,
   resumenPendientes,
   type Grupo,
+  type EstadoVisible,
 } from "./agrupar";
 import styles from "./RescatesActivos.module.css";
 import { dia, fechaCompleta, hora24 } from "./tiempo";
@@ -30,12 +31,12 @@ export function RescatesActivos() {
   const { rescates, error, actualizadoEn, actualizar } = useRescatesActivos();
   const ahora = useAhora();
   const [busqueda, setBusqueda] = useState("");
-  const [estado, setEstado] = useState<EstadoRescate | "todos">("todos");
+  const [estado, setEstado] = useState<EstadoVisible | "todos">("todos");
 
   const todos = useMemo(() => rescates ?? [], [rescates]);
-  const conteo = useMemo(() => contar(todos), [todos]);
-  const visibles = useMemo(() => filtrar(todos, busqueda, estado), [todos, busqueda, estado]);
-  const grupos = useMemo(() => agrupar(visibles), [visibles]);
+  const conteo = useMemo(() => contar(todos, ahora), [todos, ahora]);
+  const visibles = useMemo(() => filtrar(todos, busqueda, estado, ahora), [todos, busqueda, estado, ahora]);
+  const grupos = useMemo(() => agrupar(visibles, ahora), [visibles, ahora]);
 
   return (
     <div className="page">
@@ -44,12 +45,17 @@ export function RescatesActivos() {
           <h1>Rescates activos</h1>
           <p className={styles.subtitulo}>Supervisa la operación de la jornada de hoy.</p>
         </div>
-        <div className={styles.fecha}>
-          <p className={styles.hoy}>
-            <IconoCalendario tamano={18} />
-            {fechaCompleta(ahora)}
-          </p>
-          {actualizadoEn && <p className="meta">Última actualización: {hora24(actualizadoEn)} h</p>}
+        <div className={styles.accionesCabecera}>
+          <div className={styles.fecha}>
+            <p className={styles.hoy}>
+              <IconoCalendario tamano={18} />
+              {fechaCompleta(ahora)}
+            </p>
+            {actualizadoEn && <p className="meta">Última actualización: {hora24(actualizadoEn)} h</p>}
+          </div>
+          <Link href="/aviso/nuevo" className="btn btn--primary">
+            Registrar aviso
+          </Link>
         </div>
       </div>
 
@@ -77,7 +83,7 @@ export function RescatesActivos() {
         </label>
         <label>
           <span className="sr-only">Estado</span>
-          <select className="select" value={estado} onChange={(e) => setEstado(e.target.value as EstadoRescate | "todos")}>
+          <select className="select" value={estado} onChange={(e) => setEstado(e.target.value as EstadoVisible | "todos")}>
             <option value="todos">Todos los estados</option>
             {ESTADOS_ACTIVOS.map((e) => (
               <option key={e} value={e}>
@@ -130,15 +136,15 @@ export function RescatesActivos() {
 
       <p className={styles.nota}>
         <IconoInfo tamano={16} />
-        Asignar solo está habilitado en los rescates pendientes. En el resto, consulta el seguimiento en Ver detalle.
+        Los avisos vencidos aparecen como «No disponible» y ya no se pueden asignar.
       </p>
     </div>
   );
 }
 
 function Tabla({ grupos, ahora }: { grupos: Grupo[]; ahora: Date }) {
-  const [cerrados, setCerrados] = useState<Set<EstadoRescate>>(new Set());
-  const alternar = (e: EstadoRescate) =>
+  const [cerrados, setCerrados] = useState<Set<EstadoVisible>>(new Set());
+  const alternar = (e: EstadoVisible) =>
     setCerrados((c) => {
       const nuevo = new Set(c);
       if (nuevo.has(e)) nuevo.delete(e);
@@ -186,8 +192,10 @@ function Tabla({ grupos, ahora }: { grupos: Grupo[]; ahora: Date }) {
 
 function Fila({ r, ahora }: { r: FilaRescate; ahora: Date }) {
   const limite = detalleHora(r, ahora);
+  const estado = estadoVisible(r, ahora);
+  const puedeAsignar = estado === "disponible" && r.pendiente_asignar;
   return (
-    <tr className={r.pendiente_asignar ? styles.pendiente : undefined}>
+    <tr className={puedeAsignar ? styles.pendiente : undefined}>
       <td className={styles.alimento}>
         <span className={styles.principal}>{r.alimento ?? "Rescate"}</span>
         <span className={styles.sub}>
@@ -210,7 +218,7 @@ function Fila({ r, ahora }: { r: FilaRescate; ahora: Date }) {
         ) : (
           <span className={styles.sinAsignar}>Sin asignar</span>
         )}
-        <span className={styles.sub}>{detalleVoluntario(r)}</span>
+        <span className={styles.sub}>{detalleVoluntario(r, ahora)}</span>
       </td>
       <td className={styles.hora}>
         <span className={`num ${limite.urgente ? styles.urgente : styles.principalSuave}`}>
@@ -219,18 +227,18 @@ function Fila({ r, ahora }: { r: FilaRescate; ahora: Date }) {
         <span className={`${styles.sub} ${limite.urgente ? styles.urgente : ""}`}>{limite.texto}</span>
       </td>
       <td className={styles.estado}>
-        <StatusPill estado={r.estado} />
+        <StatusPill estado={estado} />
       </td>
       <td className={styles.acciones}>
-        {r.pendiente_asignar ? (
+        {puedeAsignar ? (
           <Link href={`/fundacion/rescates/${r.id}/asignar`} className="btn btn--primary btn--compact">
             Asignar
           </Link>
-        ) : (
+        ) : estado !== "no_disponible" ? (
           <button type="button" className="btn btn--secondary btn--compact" disabled>
             Asignar
           </button>
-        )}
+        ) : null}
         <Link href={`/rescates/${r.id}`} className="btn btn--secondary btn--compact">
           Ver detalle
         </Link>

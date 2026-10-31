@@ -18,6 +18,14 @@
   text-align: right;
 }
 
+.accionesCabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
 .fecha p {
   margin: 0;
 }
@@ -35,7 +43,7 @@
   margin: 0 0 20px;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
@@ -75,6 +83,10 @@
 
 .resumen_asignado .resumenCuenta {
   color: var(--asignado-ink);
+}
+
+.resumen_no_disponible .resumenCuenta {
+  color: var(--negative);
 }
 
 .resumen_recogido .resumenCuenta {
@@ -304,6 +316,10 @@
 @media (max-width: 760px) {
   .fecha {
     text-align: left;
+  }
+
+  .accionesCabecera {
+    justify-content: flex-start;
   }
 
   .resumen {

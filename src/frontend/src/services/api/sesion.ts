@@ -8,6 +8,7 @@
 
 const CLAVE_TOKEN = "rescate.token";
 const CLAVE_COMERCIO = "rescate.comercio_id";
+const EVENTO_SESION = "rescate:sesion-cambiada";
 
 function leer(clave: string): string | null {
   if (typeof window === "undefined") return null;
@@ -23,11 +24,27 @@ export function leerToken(): string | null {
   return leer(CLAVE_TOKEN);
 }
 
-/**
- * Comercio del usuario que avisa (POST /api/v1/rescates exige `comercio_id`).
- * TODO(#40): la API todavía no expone el comercio del usuario (ni en el token ni en un
- * endpoint). Cuando lo haga, tomarlo de ahí en vez de esta clave del navegador.
- */
+export function guardarToken(token: string): void {
+  window.localStorage.setItem(CLAVE_TOKEN, token);
+  window.dispatchEvent(new Event(EVENTO_SESION));
+}
+
+export function cerrarSesion(): void {
+  window.localStorage.removeItem(CLAVE_TOKEN);
+  window.localStorage.removeItem(CLAVE_COMERCIO);
+  window.dispatchEvent(new Event(EVENTO_SESION));
+}
+
+export function suscribirSesion(cambio: () => void): () => void {
+  window.addEventListener(EVENTO_SESION, cambio);
+  window.addEventListener("storage", cambio);
+  return () => {
+    window.removeEventListener(EVENTO_SESION, cambio);
+    window.removeEventListener("storage", cambio);
+  };
+}
+
+/** Compatibilidad con sesiones antiguas; el formulario usa ahora `/api/v1/auth/me`. */
 export function leerComercioId(): string | null {
   return leer(CLAVE_COMERCIO);
 }
