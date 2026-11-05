@@ -1,9 +1,12 @@
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.deps import CurrentUser, get_current_user
 from app.models import Usuario
 from app.security import create_access_token, hash_password, verify_password
 
@@ -27,6 +30,12 @@ class TokenOut(BaseModel):
     token_type: str = "bearer"
 
 
+class MeOut(BaseModel):
+    id: UUID
+    nombre: str
+    rol: str
+
+
 def _invalid_credentials() -> HTTPException:
     return HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -47,3 +56,19 @@ def login(data: LoginIn, db: Session = Depends(get_db)) -> TokenOut:
 
     access_token = create_access_token(sub=str(usuario.id), rol=usuario.rol.value)
     return TokenOut(access_token=access_token)
+
+
+@router.get("/me", response_model=MeOut)
+def me(
+    current_user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> MeOut:
+    # El JWT solo trae sub, rol y exp: el nombre se lee del usuario autenticado.
+    usuario = db.get(Usuario, current_user.usuario_id)
+    if usuario is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No autorizado",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return MeOut(id=usuario.id, nombre=usuario.nombre, rol=usuario.rol.value)

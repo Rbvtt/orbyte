@@ -36,6 +36,14 @@ class RescateCreate(BaseModel):
         return value
 
 
+class ComercioOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    nombre: str
+    direccion: str
+
+
 class RescateOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
