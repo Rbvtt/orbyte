@@ -20,7 +20,9 @@ $env:SEED_PASSWORD = "una-clave-local-de-prueba"
 python -m scripts.seed_demo
 ```
 
-Las contraseñas no se guardan en el repositorio ni se imprimen. Usa una clave de prueba diferente a cualquier credencial personal. Los rescates disponibles, asignados y recogidos tienen hora límite futura; los entregados abarcan dos meses distintos y todos conservan su secuencia de historial. El script **no se ha ejecutado** contra una base en esta preparación. La entrega de fixture y script adelanta #36/#26, pero **no cierra** sus criterios de aceptación.
+Las contraseñas no se guardan en el repositorio ni se imprimen. Usa una clave de prueba diferente a cualquier credencial personal. Los rescates disponibles, asignados y recogidos tienen hora límite futura; los entregados abarcan dos meses distintos y todos conservan su secuencia de historial. Validación local completada en PostgreSQL 18 aislado (contenedor `postgres:18-alpine`, puerto `127.0.0.1:55432`): se aplicaron las migraciones `0001`–`0004`, el seed se ejecutó dos veces (15 rescates insertados la primera vez y 0 nuevos la segunda), y se verificaron 3 organizaciones, 3 voluntarios, 15 rescates, 36 filas de historial, estados y entregas en dos meses. El smoke test de API verificó inicio de sesión de fundación, catálogos, asignación CA-02.1, acceso al detalle por el voluntario asignado y el historial. La suite completa de backend contra PostgreSQL terminó con `72 passed`.
+
+Esta evidencia adelanta #36/#26, pero no cierra por sí sola los issues: QA/equipo debe revisarla y adjuntarla, PO debe confirmar con Marcela los datos reales si hacen falta, y los revisores deben aceptar el enfoque Python frente a la mención de `seed_demo.sql` en #26. Las bases de prueba no contienen datos reales.
 
 ## Casos preparados para QA
 
@@ -40,8 +42,7 @@ La organización C y el voluntario C permiten comprobar cómo se presenta la fal
 
 ## Pendientes para aceptar #36
 
-- Cargar datos con el mecanismo del equipo y comprobar integridad de las referencias.
-- Verificar que GET de organizaciones y voluntarios devuelve los registros.
-- Ejecutar CA-02.1 de punta a punta y adjuntar evidencia de QA.
+- Revisar y adjuntar la evidencia de carga, catálogos e integridad de referencias obtenida en PostgreSQL local.
+- Revisar y adjuntar la evidencia de CA-02.1 de punta a punta.
 - Confirmar con Marcela datos reales si se necesita operación real; mantenerlos fuera de este fixture público.
-- Ejecutar el seed en PostgreSQL local aislado con QA, verificar segunda ejecución sin duplicados y probar las cuentas según permisos; adjuntar evidencia de PostgreSQL.
+- Adjuntar la evidencia local de ejecución idempotente en PostgreSQL y validar las cuentas según permisos.

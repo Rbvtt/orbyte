@@ -33,11 +33,11 @@ DATA = ROOT / "docs" / "datos" / "cmp02"
 NOW = datetime.now(timezone.utc).replace(microsecond=0)
 
 USERS = {
-    "fundacion": (UUID("00000000-0000-4000-8000-000000000101"), "Fundación Demo", "fundacion-demo@example.invalid", UsuarioRol.FUNDACION),
-    "organizacion_a": (UUID("00000000-0000-4000-8000-000000000211"), "Organización Demo A", "organizacion-a@example.invalid", UsuarioRol.ORGANIZACION),
-    "organizacion_b": (UUID("00000000-0000-4000-8000-000000000212"), "Organización Demo B", "organizacion-b@example.invalid", UsuarioRol.ORGANIZACION),
-    "comercio_a": (UUID("00000000-0000-4000-8000-000000000401"), "Comercio Demo A", "comercio-a@example.invalid", UsuarioRol.COMERCIO),
-    "comercio_b": (UUID("00000000-0000-4000-8000-000000000402"), "Comercio Demo B", "comercio-b@example.invalid", UsuarioRol.COMERCIO),
+    "fundacion": (UUID("00000000-0000-4000-8000-000000000101"), "Fundación Demo", "fundacion-demo@example.com", UsuarioRol.FUNDACION),
+    "organizacion_a": (UUID("00000000-0000-4000-8000-000000000211"), "Organización Demo A", "organizacion-a@example.com", UsuarioRol.ORGANIZACION),
+    "organizacion_b": (UUID("00000000-0000-4000-8000-000000000212"), "Organización Demo B", "organizacion-b@example.com", UsuarioRol.ORGANIZACION),
+    "comercio_a": (UUID("00000000-0000-4000-8000-000000000401"), "Comercio Demo A", "comercio-a@example.com", UsuarioRol.COMERCIO),
+    "comercio_b": (UUID("00000000-0000-4000-8000-000000000402"), "Comercio Demo B", "comercio-b@example.com", UsuarioRol.COMERCIO),
 }
 
 ALIMENTOS = (
