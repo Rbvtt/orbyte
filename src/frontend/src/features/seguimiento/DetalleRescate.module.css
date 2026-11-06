@@ -106,6 +106,101 @@
   font-weight: 650;
 }
 
+.historial {
+  margin-top: 23px;
+}
+
+.timeline {
+  position: relative;
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 18px 24px 18px 38px;
+  list-style: none;
+}
+
+.timeline::before {
+  position: absolute;
+  top: 26px;
+  bottom: 26px;
+  left: 47px;
+  width: 1px;
+  background: #dce8df;
+  content: "";
+}
+
+.evento {
+  position: relative;
+  display: flex;
+  gap: 18px;
+  padding: 0 0 24px;
+}
+
+.evento:last-child {
+  padding-bottom: 0;
+}
+
+.marcador {
+  z-index: 1;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  border: 4px solid #fff;
+  border-radius: 50%;
+  background: #39805b;
+  box-shadow: 0 0 0 1px #b9d1c0;
+}
+
+.eventoContenido {
+  min-width: 0;
+}
+
+.transicion,
+.fecha,
+.actor {
+  margin: 0;
+}
+
+.transicion {
+  color: #27382c;
+  font-size: 14px;
+  font-weight: 750;
+  text-transform: capitalize;
+}
+
+.fecha,
+.actor {
+  margin-top: 4px;
+  color: #748077;
+  font-size: 12px;
+}
+
+.actor strong {
+  color: #39805b;
+}
+
+.detalle {
+  display: grid;
+  gap: 3px 14px;
+  margin: 10px 0 0;
+  color: #56645a;
+  font-size: 12px;
+}
+
+.detalle div {
+  display: flex;
+  gap: 5px;
+}
+
+.detalle dt {
+  font-weight: 700;
+}
+
+.detalle dd {
+  margin: 0;
+}
+
 @media (max-width: 560px) {
   .pagina {
     padding: 24px 15px 44px;
@@ -129,5 +224,14 @@
     grid-template-columns: 1fr;
     gap: 4px;
     padding: 13px 0;
+  }
+
+  .timeline {
+    padding-right: 17px;
+    padding-left: 18px;
+  }
+
+  .timeline::before {
+    left: 27px;
   }
 }

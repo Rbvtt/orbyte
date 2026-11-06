@@ -1,6 +1,6 @@
 /** #37 · Consulta de rescates (app/schemas/rescates.py). */
 
-import type { EstadoRescate } from "./api";
+import type { EstadoRescate, RolUsuario } from "./api";
 
 /** GET /api/v1/rescates?estado=activos (RescateListaOut). */
 export interface RescateLista {
@@ -56,6 +56,17 @@ export interface RescateDetalle {
   asignado_por?: string;
   observaciones?: string;
   origen_aviso?: "comercio" | "fundacion";
+}
+
+export interface RescateHistorial {
+  id: number;
+  estado_anterior: EstadoRescate | null;
+  estado_nuevo: EstadoRescate;
+  ocurrido_en: string;
+  actor_id: string;
+  actor_nombre: string;
+  actor_rol: RolUsuario;
+  detalle: Record<string, unknown>;
 }
 
 export interface RescateAvisoComercio {

@@ -3,9 +3,9 @@
 import { useParams } from "next/navigation";
 import { StatusPill } from "@/components/ui/StatusPill";
 import { referencia } from "@/features/rescates/referencia";
-import { dia, hora, restante } from "@/features/rescates/tiempo";
+import { dia, fechaCompleta, hora, hora24, restante } from "@/features/rescates/tiempo";
 import { useAhora } from "@/features/rescates/useAhora";
-import type { RescateDetalle } from "@/types/rescates";
+import type { RescateDetalle, RescateHistorial } from "@/types/rescates";
 import styles from "./DetalleRescate.module.css";
 import { useDetalleRescate } from "./useDetalleRescate";
 
@@ -31,7 +31,7 @@ export function DetalleRescate() {
       </div>
     );
   } else {
-    contenido = <Contenido rescate={datos.rescate} />;
+    contenido = <Contenido rescate={datos.rescate} historial={datos.historial} />;
   }
 
   return <main className={styles.pagina}>{contenido}</main>;
@@ -72,7 +72,7 @@ function ErrorDetalle({ status, mensaje, reintentar }: { status: number | null; 
   );
 }
 
-function Contenido({ rescate }: { rescate: RescateDetalle }) {
+function Contenido({ rescate, historial }: { rescate: RescateDetalle; historial: RescateHistorial[] }) {
   const ahora = useAhora();
   const activo = rescate.estado === "disponible" || rescate.estado === "asignado";
   const t = rescate.hora_limite ? restante(rescate.hora_limite, ahora) : null;
@@ -155,7 +155,63 @@ function Contenido({ rescate }: { rescate: RescateDetalle }) {
         </dl>
       </section>
 
+      {historial.length > 0 && <LineaTiempo historial={historial} />}
+
       {/* Contenedor de acciones por rol y estado: aquí van la recogida (#45) y el cierre como no completado (#44). */}
     </>
   );
+}
+
+function LineaTiempo({ historial }: { historial: RescateHistorial[] }) {
+  return (
+    <section className={`panel ${styles.historial}`} aria-labelledby="historial-titulo">
+      <div className="panel__header">
+        <h2 id="historial-titulo" className={styles.seccion}>
+          Historial del rescate
+        </h2>
+      </div>
+      <ol className={styles.timeline}>
+        {historial.map((transicion) => (
+          <li key={transicion.id} className={styles.evento}>
+            <span className={styles.marcador} aria-hidden="true" />
+            <div className={styles.eventoContenido}>
+              <p className={styles.transicion}>
+                {transicion.estado_anterior
+                  ? `${transicion.estado_anterior} → ${transicion.estado_nuevo}`
+                  : `Creado como ${transicion.estado_nuevo}`}
+              </p>
+              <p className={styles.fecha}>
+                {fechaCompleta(new Date(transicion.ocurrido_en))} · {hora24(new Date(transicion.ocurrido_en))}
+              </p>
+              <p className={styles.actor}>
+                Responsable: <strong>{transicion.actor_nombre}</strong> · {transicion.actor_rol}
+              </p>
+              <DetalleTransicion detalle={transicion.detalle} />
+            </div>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+function DetalleTransicion({ detalle }: { detalle: Record<string, unknown> }) {
+  const entradas = Object.entries(detalle).filter(
+    ([, valor]) => typeof valor === "string" || typeof valor === "number",
+  );
+  if (entradas.length === 0) return null;
+  return (
+    <dl className={styles.detalle}>
+      {entradas.map(([clave, valor]) => (
+        <div key={clave}>
+          <dt>{etiquetaDetalle(clave)}</dt>
+          <dd>{String(valor)}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function etiquetaDetalle(clave: string): string {
+  return clave.replaceAll("_", " ").replace(/^\w/, (letra) => letra.toUpperCase());
 }
