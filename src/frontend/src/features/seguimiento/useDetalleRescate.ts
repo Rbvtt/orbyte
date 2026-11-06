@@ -3,13 +3,21 @@
 import { useCallback, useEffect, useState } from "react";
 import { ApiError } from "@/services/api/client";
 import { rescatesApi } from "@/services/api/rescates";
-import type { RescateDetalle } from "@/types/rescates";
+import type { RescateDetalle, RescateHistorial } from "@/types/rescates";
 
-type Datos = { rescate: RescateDetalle };
+type Datos = { rescate: RescateDetalle; historial: RescateHistorial[] };
 export type ErrorDetalle = { status: number | null; mensaje: string };
 
 async function cargarTodo(id: string): Promise<Datos> {
-  return { rescate: await rescatesApi.detalle(id) };
+  const rescate = await rescatesApi.detalle(id);
+  try {
+    return { rescate, historial: await rescatesApi.historial(id) };
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 403) {
+      return { rescate, historial: [] };
+    }
+    throw error;
+  }
 }
 
 function aError(error: unknown): ErrorDetalle {

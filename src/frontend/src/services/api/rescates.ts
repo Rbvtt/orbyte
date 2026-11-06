@@ -1,4 +1,9 @@
-import type { RescateAvisoComercio, RescateDetalle, RescateLista } from "@/types/rescates";
+import type {
+  RescateAvisoComercio,
+  RescateDetalle,
+  RescateHistorial,
+  RescateLista,
+} from "@/types/rescates";
 import { apiFetch } from "./client";
 
 export const rescatesApi = {
@@ -15,6 +20,8 @@ export const rescatesApi = {
   ) => apiFetch<void>(`/api/v1/rescates/${id}/recepcion`, { method: "POST", body: datos }),
   /** GET /api/v1/rescates/{id} (#37). Los campos dependen del rol; sin permiso responde 404. */
   detalle: (id: string, signal?: AbortSignal) => apiFetch<RescateDetalle>(`/api/v1/rescates/${id}`, { signal }),
+  historial: (id: string, signal?: AbortSignal) =>
+    apiFetch<RescateHistorial[]>(`/api/v1/rescates/${id}/historial`, { signal }),
   asignar: (id: string, datos: { organizacion_id: string; voluntario_id: string; motivo?: string }) =>
     apiFetch<{ id: string; estado: string; organizacion_id: string; voluntario_id: string }>(
       `/api/v1/rescates/${id}/asignacion`,

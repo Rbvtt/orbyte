@@ -231,7 +231,7 @@ Los endpoints de negocio aún corresponden a otros issues; donde el plan técnic
 | `POST /rescates/{id}/recogida` (#16) | Por definir |
 | `POST /rescates/{id}/entrega` (#17) | Por definir |
 | `GET /rescates` y `GET /rescates/{id}` (#37) | Por definir |
-| `GET /rescates/{id}/historial` (#43) | Por definir |
+| `GET /rescates/{id}/historial` (#43) | `fundacion`; se visualiza en la línea de tiempo de `/rescates/{id}` (#15) |
 | `POST /rescates/{id}/no-completado` (#44) | Por definir |
 | `GET /impacto` (#51) | Por definir |
 
