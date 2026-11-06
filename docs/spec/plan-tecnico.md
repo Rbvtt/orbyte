@@ -1,49 +1,37 @@
 # Plan técnico
 
 ## Alternativa seleccionada
-La alternativa seleccionada en el Módulo 2 es la **Aplicación web responsiva con panel administrativo**. Esta opción fue elegida porque mitiga las restricciones críticas de la Fundación Mesa Común:
-- **Ausencia de soporte técnico y presupuesto ajustado:** Su desarrollo unificado y el uso de plataformas sin mantenimiento manual permiten que el sistema sea operado por Marcela y Diana manteniéndose dentro del límite mensual de $150.000 COP.
-- **Conectividad limitada y dispositivos básicos:** Al ser un sistema que se abre desde un enlace, evita la instalación de aplicaciones en los teléfonos básicos (usados por 4 de los 14 comercios) y reduce la fricción en la coordinación de rescates urgentes.
+
+La alternativa seleccionada en el Módulo 2 es una aplicación web responsiva con panel administrativo. Se priorizan formularios breves, navegación desde un enlace y bajo consumo de datos para apoyar a la Fundación Mesa Común y a los comercios con conectividad limitada.
 
 ## Arquitectura
-La aplicación utilizará una arquitectura cliente-servidor separada (Frontend y Backend desacoplados) para garantizar rapidez y bajo consumo de datos:
-- **Frontend (Cliente):** Se construirá con **React** (Single Page Application). Esto permite crear una interfaz ligera y formularios breves que cargan rápido, mitigando el riesgo de la mala conectividad de los voluntarios con datos prepago limitados.
-- **Backend (Servidor):** Se implementará con **FastAPI** (Python). Es un framework de alto rendimiento y bajo consumo de recursos, ideal para procesar rápidamente los cambios de estado (aviso, asignación, recogida) manteniendo bajos los costos de operación.
-- **Comunicación:** El Frontend consumirá los datos del Backend a través de una API REST, enviando y recibiendo únicamente JSON (datos de texto ligeros) para reducir al máximo el uso de internet móvil.
+
+- **Frontend:** React con Next.js, en `src/frontend/`.
+- **Backend:** FastAPI (Python), en `src/backend/`.
+- **Comunicación:** API REST con JSON.
+- **Persistencia:** PostgreSQL, con cambios de esquema gestionados por Alembic.
+- **Autenticación:** tokens JWT verificados por el backend y controles por rol y pertenencia al recurso.
 
 ## Modelo de datos
-Para garantizar la trazabilidad exigida por el caso y evitar el doble conteo de entregas o rescates duplicados, la información se estructurará en una base de datos relacional (**PostgreSQL**). Las entidades principales son:
 
-- **Usuario:** Almacena los datos de inicio de sesión y el rol (Fundación, Voluntario, Organización, Comercio) para controlar permisos y mitigar el riesgo de acceso indebido.
-- **Rescate (Entidad central):**
-  - *Atributos:* ID único, alimento, cantidad aproximada, lugar de recogida, hora límite, cantidad final recibida (marcada como estimada o medida).
-  - *Estados (Trazabilidad):* `disponible` -> `asignado` -> `recogido` -> `entregado` (o `no completado`).
-  - *Asociaciones:* Fecha y hora de creación, quién registró (comercio o fundación asistida), voluntario asignado, y organización receptora.
-- **Reporte / Impacto:** Una vista o tabla consolidada que suma los kilogramos recibidos y personas beneficiadas por periodo, filtrando estrictamente los rescates en estado `entregado`.
+El esquema integrado incluye `usuarios`, `comercios`, `organizaciones_receptoras`, `voluntarios`, `rescates`, `historial_estados` y `idempotency_keys`.
 
-## Modelo detallado, transacciones y permisos
-
-### Detalle del modelo y trazabilidad
-
-El esquema integrado por el PR #65 contiene `usuarios`, `comercios`, `organizaciones_receptoras`, `voluntarios` y `rescates`. La siguiente separación distingue lo implementado del diseño aún pendiente:
-
-| Entidad o campos | Uso y criterio | Estado al 29-10-2026 |
+| Entidad o campos | Uso | Estado comprobado en `main` al 2026-11-06 |
 |---|---|---|
-| `rescates`: comercio, alimento, cantidad aproximada, lugar y hora límite; `registrado_por`, `creado_en` | CA-01.1 y CA-01.3; identidad del comercio y del actor que registra | Columnas integradas; API y formulario pendientes de integración |
-| `organizaciones_receptoras`: capacidad, refrigeración, horario, puede recoger | RF-002 y CA-02.1; elegir destino adecuado | Tabla integrada; datos representativos en `docs/datos/cmp02/` |
-| `voluntarios`: usuario, transporte y disponibilidad | RF-006 y CA-02.1/CA-02.3 | Tabla integrada; datos representativos preparados |
-| `organizacion_id`, `voluntario_id`, `asignado_en`, `asignado_por` | CA-02.1; destino, traslado y responsable de asignación | Columnas integradas; operación atómica pendiente (#11) |
-| `recogido_en`, `entregado_en`, `recibido_por`, `cantidad_recibida`, `unidad_recibida`, `es_medida`, `personas_beneficiadas` | CA-04.1–CA-04.3; recepción e impacto trazables | Columnas integradas; validación de transición pendiente |
-| `motivo_no_completado` | CA-03.4; explicación del cierre sin entrega | Columna y CHECK de no nulo integrados |
-| `historial_estados` | CA-03.3, RF-014, RF-015, RNF-011 | Diseño pendiente de implementación en #35 |
+| Aviso: comercio, alimento, cantidad aproximada, lugar, hora límite, actor y fecha | CA-01.1 y CA-01.3 | API `POST /api/v1/rescates` y formulario integrados (#6, #8). El flujo asistido #42 figura En revisión y no está integrado en `main`; CMP-01 aún requiere QA. |
+| Organizaciones y voluntarios | RF-002, RF-006, CA-02.1/CA-02.3 | Tablas y endpoints de catálogo integrados (#5, #39). El fixture ficticio y el seed para la demo están preparados en `docs/datos/cmp02/`; falta cargar y verificar los datos en una base QA y completar CA-02.1. |
+| `organizacion_id`, `voluntario_id`, `asignado_en`, `asignado_por` | CA-02.1 | Columnas, API, controles de rol y operación atómica integrados (#10, #11, #40). La prueba de concurrencia de PostgreSQL sigue pendiente (#13). |
+| `recogido_en`, `entregado_en`, `recibido_por`, cantidad, unidad, medida/estimación y personas beneficiadas | CA-04.1–CA-04.3 | Columnas integradas en el esquema (#5); endpoints y pantallas de CMP-04 siguen pendientes. |
+| `motivo_no_completado` | CA-03.4 | Columna integrada; falta el endpoint y su interfaz (#44). |
+| `historial_estados` | CA-03.3, RF-014, RF-015, RNF-011 | Migración append-only y escritura atómica en creación/asignación integradas (#35). Falta consulta API/UI del historial (#43, #15). |
 
-La organización es la entidad receptora (`rescates.organizacion_id`); quien recibe es una persona autenticada (`rescates.recibido_por` → `usuarios.id`). No son intercambiables. La API debe comprobar que el usuario pertenece a la organización destino. `usuarios.organizacion_id` expresa esa relación. La relación usuario–comercio todavía debe definirse e implementarse en #40/#58: no se debe confiar en un `comercio_id` arbitrario enviado por el cliente.
+La organización receptora (`rescates.organizacion_id`) es distinta de la persona autenticada que recibe (`rescates.recibido_por`, FK a `usuarios.id`). `usuarios.organizacion_id` asocia a la persona con su organización. `usuarios.comercio_id` asocia el usuario comercio a su comercio; el servidor obtiene la identidad del token y no acepta una pertenencia elegida por el cliente.
 
-El esquema inicial no impone todas las reglas de negocio. Por ejemplo, los campos de recepción existentes no sustituyen la validación de estado previo, pertenencia al destino, unidad, condición medida/estimada y fecha de entrega exigida por CA-04.2 y CA-04.4.
+Los datos almacenados para la recepción no implementan por sí solos las reglas de transición, pertenencia al destino, validación de cantidades o permisos de CA-04. Esas reglas permanecen pendientes junto con los endpoints de la historia CMP-04.
 
-### Asignación atómica y registro de movimientos
+## Asignación atómica e historial
 
-Para #11 se elige una única sentencia condicional, parametrizada, en PostgreSQL READ COMMITTED:
+La API de asignación usa una única actualización condicional equivalente a:
 
 ```sql
 UPDATE rescates
@@ -58,34 +46,38 @@ WHERE id = :rescate_id
 RETURNING id;
 ```
 
-PostgreSQL serializa las actualizaciones concurrentes de la misma fila y vuelve a comprobar la condición: solo una solicitud puede cambiar un rescate disponible. La API debe distinguir inexistencia (404) de conflicto de asignación (409), validar el rol y las referencias, y no anunciar éxito cuando no se devuelve ninguna fila. No se hace una lectura seguida de una escritura incondicional. #13 debe demostrar exactamente un ganador y que se conserva su voluntario. #11 también contempla un CHECK que exija voluntario en estados asignado, recogido y entregado; no está en la migración inicial.
+En PostgreSQL, solo una solicitud concurrente puede cambiar la fila disponible; la API devuelve conflicto cuando otra solicitud ya ganó. La migración `0003` añade un CHECK que exige voluntario en estados `asignado`, `recogido` y `entregado`. La API agrega el movimiento a `historial_estados` dentro de la misma transacción. La prueba de carrera contra PostgreSQL y su evidencia son el pendiente de #13.
 
-El historial previsto en #35 contiene `id`, `rescate_id`, `estado_anterior`, `estado_nuevo`, `actor_id`, `ocurrido_en` y `detalle JSONB`. La actualización condicional y el INSERT del historial deben compartir transacción; un fallo del historial revierte el cambio. El rol de aplicación no tendrá UPDATE ni DELETE sobre el historial y debe ser distinto del propietario usado para migraciones. Esta protección y la función `cambiar_estado()` siguen pendientes: no se presentan como capacidades actuales.
+La migración `0004` define `historial_estados` con `id`, `rescate_id`, `estado_anterior`, `estado_nuevo`, `actor_id`, `ocurrido_en` y `detalle JSONB`, y bloquea modificaciones y borrados. La función `cambiar_estado()` ya proporciona actualización condicional e inserción atómica del historial. Aún falta exponer el historial para CMP-03 y usar esta transición en los endpoints de recogida, entrega y cierre no completado.
 
-### Matriz de permisos prevista (RF-024 / #40)
+## Matriz de permisos
 
-Los permisos se verifican en el servidor por rol **y por pertenencia al recurso**. Esta matriz expresa el comportamiento esperado; su implementación y pruebas corresponden a #40 y a cada endpoint.
+El backend valida el rol y la pertenencia al rescate. La autenticación JWT y las consultas de lista/detalle están integradas (#37, #40); las acciones futuras deben aplicar los permisos indicados y acompañarse de pruebas de acceso cruzado.
 
 | Acción | Fundación | Comercio | Voluntario | Organización |
 |---|---|---|---|---|
-| Registrar aviso | En nombre de un comercio (CA-01.3) | Solo el propio comercio | No | No |
-| Asignar destino y voluntario | Sí | No | No | No |
-| Consultar rescates | Seguimiento de rescates | Solo propios | Solo asignados a sí mismo | Solo los de su organización |
-| Registrar recogida | No | No | Solo el asignado, desde `asignado` | No |
-| Confirmar recepción y registrar beneficiados | No | No | No | Solo destino, desde `recogido` |
-| Cerrar como no completado | Sí, con motivo y estado permitido | No | No | No |
-| Consultar impacto global | Sí | No | No | No |
+| Registrar aviso | En nombre de un comercio | Solo para su comercio | No | No |
+| Asignar organización y voluntario | Sí | No | No | No |
+| Consultar detalle | Cualquier rescate | Avisos propios | Si está asignado | Si es el destino |
+| Consultar activos | Sí | No | No | No |
+| Registrar recogida | No | No | Voluntario asignado, desde `asignado` (pendiente #16) | No |
+| Confirmar recepción y beneficiados | No | No | No | Organización destino, desde `recogido` (pendiente #17/#48) |
+| Marcar no completado | Fundación, con motivo y estado permitido (pendiente #44) | No | No | No |
+| Consultar impacto | Sí (pendiente #51) | No | No | No |
 
-Los beneficiados solo son visibles para fundación y organización destino. El usuario y rol proceden del token verificado y del usuario activo, no de campos de identidad enviados por el cliente. Sin autenticación: 401; rol no autorizado: 403. Los endpoints deben evitar exponer recursos ajenos y contar con pruebas de acceso cruzado. La matriz no amplía el alcance de la entrega académica, que debe confirmarse con su guía.
+Para detalles no autorizados se responde 404, evitando revelar la existencia del recurso. El conteo de beneficiados debe ser visible solo para la Fundación y la organización receptora, conforme a RNF-005.
 
-## Integraciones
+## Próximas entregas de comportamiento
 
-Debido al techo presupuestal y para minimizar dependencias que puedan generar fallos, el MVP se mantendrá con dependencias externas mínimas:
-- **Servicios de Identidad/Autenticación:** El sistema gestionará credenciales seguras de manera interna (usando tokens JWT desde FastAPI).
-- *Posibles integraciones futuras (fuera del MVP):* Una vez validado el piloto y asegurada la financiación, se podría evaluar la integración de un servicio de notificaciones transaccionales (SMS o correo) para avisar rápidamente al voluntario asignado.
+- **CMP-02:** están integradas la consulta de catálogos, la vista de asignación, el endpoint y la protección atómica. Falta cargar los datos de prueba, ejecutar la asignación de punta a punta y que QA demuestre concurrencia en PostgreSQL (#36, #13).
+- **CMP-03:** están integradas la lista de rescates activos, el indicador pendiente de asignar, el detalle filtrado por rol y la escritura del historial (#37, #38, #12, #35). Faltan GET del historial (#43), cierre no completado (#44), la línea de tiempo (#15) y la suite de aceptación (#49).
+- **CMP-04:** la recogida, confirmación de entrega y beneficiados aún requieren API, interfaz y QA (#16–#18, #45–#50).
+- **CMP-05:** agregación de impacto y su detalle aún requieren diseño, API, interfaz y QA (#19–#24, #51).
 
-## Entorno y despliegue
-Para asegurar que Marcela y Diana no tengan que administrar infraestructura ni lidiar con servidores, el entorno utilizará plataformas gestionadas (PaaS) que ofrecen capas gratuitas (mitigando el riesgo de exceder los $150.000 mensuales):
-- **Despliegue del Frontend:** **Vercel**. Alojará la aplicación en React. Garantiza que la página siempre esté disponible mediante un enlace seguro, cargando con alta velocidad y actualizándose automáticamente con cada cambio en la rama `main` del repositorio.
-- **Despliegue del Backend y Base de datos:** **Render**. Alojará el servidor de FastAPI y la base de datos PostgreSQL. Esta plataforma administra la red y la seguridad automáticamente, cumpliendo la necesidad de una operación sin equipo técnico dedicado.
-- **Plan de la base de datos:** La base PostgreSQL gratuita de Render vence 30 días después de creada. La propuesta es usarla hasta la Demo y luego pasarla a Basic-256mb, que cuesta unos $19.900 COP al mes. Neon Free queda como alternativa sin costo. Ver [ADR 0001](../decisiones/0001-plan-base-de-datos-render.md).
+El seed de demostración usa exclusivamente registros ficticios y requiere una base aislada. No sustituye la recopilación con Marcela si se usarán datos operativos reales. El alcance de la entrega académica debe cotejarse con la guía del curso antes de descartar historias posteriores.
+
+## Integraciones y despliegue propuestos
+
+El MVP gestiona credenciales y JWT internamente. Notificaciones por SMS o correo se consideran una posible integración futura.
+
+El plan propone Vercel para el frontend y Render para FastAPI y PostgreSQL. El costo, la fecha de vencimiento del plan gratuito y quién pagaría deben confirmarse al desplegar; el ADR 0001 sigue siendo una propuesta.

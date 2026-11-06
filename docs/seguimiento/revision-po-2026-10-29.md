@@ -1,4 +1,6 @@
-# Revisión del PO — 29 de octubre de 2026
+# Revisión del PO — 29 de octubre de 2026 (histórica)
+
+> Esta revisión corresponde al estado anterior a los merges del 30 de octubre al 6 de noviembre. Para el estado actual, consulta [la revisión del 6 de noviembre](revision-po-2026-11-06.md). No usar este archivo para decidir qué está integrado hoy.
 
 ## Alcance y estado comprobado
 

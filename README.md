@@ -266,5 +266,5 @@ El detalle de herramientas y usos conocidos está en [USO_IA.md](USO_IA.md).
 ## Preparación y seguimiento
 
 - [Datos representativos y casos para CMP-02](docs/datos/cmp02/README.md).
-- [Revisión del PO y pendientes de aceptación](docs/seguimiento/revision-po-2026-10-29.md).
+- [Revisión del PO y pendientes de aceptación](docs/seguimiento/revision-po-2026-11-06.md).
 
