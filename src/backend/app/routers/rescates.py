@@ -11,6 +11,7 @@ from app.schemas.rescates import (
     RescateComercioOut,
     RescateCreate,
     RescateDetalleOut,
+    RescateHistorialOut,
     RescateListaOut,
     RescateOut,
     RescateReasignacionIn,
@@ -31,6 +32,7 @@ from app.services.rescates import (
     marcar_entregado_por_voluntario,
     listar_avisos_comercio,
     listar_asignaciones_usuario,
+    listar_historial_rescate,
     listar_rescates_activos,
     obtener_detalle_rescate,
 )
@@ -143,6 +145,25 @@ def post_recepcion_organizacion(
             status_code=status.HTTP_409_CONFLICT,
             detail="El rescate todavía no está entregado por el voluntario",
         ) from None
+
+
+@router.get(
+    "/{rescate_id}/historial",
+    response_model=list[RescateHistorialOut],
+)
+def get_historial_rescate(
+    rescate_id: UUID,
+    _current_user: CurrentUser = Depends(require_role("fundacion")),
+    db: Session = Depends(get_db),
+) -> list[RescateHistorialOut]:
+    try:
+        historial = listar_historial_rescate(db, rescate_id)
+    except RescateNoEncontrado:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="El rescate no existe",
+        ) from None
+    return [RescateHistorialOut.model_validate(item) for item in historial]
 
 
 @router.get(

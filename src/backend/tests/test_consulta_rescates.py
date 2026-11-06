@@ -106,10 +106,12 @@ def consulta_data(real_db):
             organizacion_id=organizacion_id,
             voluntario_id=voluntario_id,
             asignado_en=datetime.now(timezone.utc)
-            if estado in {RescateEstado.ASIGNADO, RescateEstado.RECOGIDO}
+            if estado
+            in {RescateEstado.ASIGNADO, RescateEstado.RECOGIDO, RescateEstado.ENTREGADO}
             else None,
             asignado_por=fundacion.id
-            if estado in {RescateEstado.ASIGNADO, RescateEstado.RECOGIDO}
+            if estado
+            in {RescateEstado.ASIGNADO, RescateEstado.RECOGIDO, RescateEstado.ENTREGADO}
             else None,
             motivo_no_completado="Prueba"
             if estado == RescateEstado.NO_COMPLETADO
@@ -178,6 +180,7 @@ def consulta_data(real_db):
         asignado=asignado,
         asignado_otro_voluntario=asignado_otro_voluntario,
         recogido=recogido,
+        entregado=entregado,
         activo_ids={disponible.id, asignado.id, recogido.id},
         inactivo_ids={entregado.id, no_completado.id},
     )
@@ -292,7 +295,7 @@ def test_listado_mis_asignaciones_filtra_por_usuario_y_organizacion(
     assert all(item["lugar_entrega"] == "Carrera 3" for item in body)
     assert next(item for item in body if item["id"] == str(consulta_data.asignado.id))[
         "estado_visual"
-    ] == "por_recibir"
+    ] == ("por_recibir" if usuario == "usuario_organizacion" else "asignado")
     assert next(item for item in body if item["id"] == str(consulta_data.recogido.id))[
         "estado_visual"
     ] == ("entregado_por_voluntario" if usuario == "voluntario" else "por_recibir")

@@ -57,6 +57,43 @@ class ConflictoEstadoRescate(RuntimeError):
     pass
 
 
+def listar_historial_rescate(db: Session, rescate_id: UUID) -> list[dict]:
+    """Devuelve el historial con el responsable y su rol en orden cronológico."""
+    rescate_existe = db.scalar(select(Rescate.id).where(Rescate.id == rescate_id))
+    if rescate_existe is None:
+        raise RescateNoEncontrado
+
+    filas = db.execute(
+        select(
+            RescateHistorial.id,
+            RescateHistorial.estado_anterior,
+            RescateHistorial.estado_nuevo,
+            RescateHistorial.cambiado_en,
+            RescateHistorial.cambiado_por,
+            Usuario.nombre,
+            Usuario.rol,
+            RescateHistorial.detalle,
+        )
+        .join(Usuario, Usuario.id == RescateHistorial.cambiado_por)
+        .where(RescateHistorial.rescate_id == rescate_id)
+        .order_by(RescateHistorial.cambiado_en.asc(), RescateHistorial.id.asc())
+    ).all()
+
+    return [
+        {
+            "id": fila.id,
+            "estado_anterior": fila.estado_anterior,
+            "estado_nuevo": fila.estado_nuevo,
+            "ocurrido_en": fila.cambiado_en,
+            "actor_id": fila.cambiado_por,
+            "actor_nombre": fila.nombre,
+            "actor_rol": fila.rol.value,
+            "detalle": fila.detalle,
+        }
+        for fila in filas
+    ]
+
+
 def _ejecutar_asignacion(
     db: Session,
     rescate_id: UUID,

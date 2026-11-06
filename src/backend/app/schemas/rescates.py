@@ -131,6 +131,17 @@ class RescateAsignacionOut(BaseModel):
     asignado_por: UUID
 
 
+class RescateHistorialOut(BaseModel):
+    id: int
+    estado_anterior: RescateEstado | None
+    estado_nuevo: RescateEstado
+    ocurrido_en: datetime
+    actor_id: UUID
+    actor_nombre: str
+    actor_rol: str
+    detalle: dict
+
+
 class RescateRecepcionIn(BaseModel):
     cantidad_recibida: float = Field(gt=0)
     es_medida: bool
