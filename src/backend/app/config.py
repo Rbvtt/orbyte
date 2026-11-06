@@ -17,7 +17,9 @@ class Settings(BaseSettings):
     database_url: str = ""
     jwt_secret: str = ""
     jwt_expires_min: int = 60
-    cors_origins: str = "http://localhost:5173"
+    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000"
+    default_admin_email: str = "marcela@gmail.com"
+    default_admin_password: str = "Admin123*"
 
     @property
     def sqlalchemy_database_url(self) -> str:

@@ -1,35 +1,39 @@
 /* Colores del prototipo de #7 (docs/design/formulario-aviso). */
 .aviso {
-  --verde: #286247;
-  --verde-hover: #1f4f39;
+  --verde: #286b48;
+  --verde-hover: #20583b;
   --verde-texto: #356c52;
-  --verde-suave: #ecf3eb;
+  --verde-suave: #edf5ee;
   --tinta: #1d2b24;
-  --gris: #66706a;
-  --borde: #d5ddd5;
-  --rojo: #b3341f;
-  --rojo-suave: #fbeae5;
-  --crema: #f1efe3;
-
+  --gris: #68756c;
+  --borde: #e0e8e0;
+  --rojo: #a33120;
+  --rojo-suave: #fff1ed;
+  --crema: #faf7ed;
   color: var(--tinta);
+}
+
+.volver {
+  margin-bottom: 16px;
 }
 
 .titulo {
   margin: 0;
-  font-size: 28px;
-  line-height: 34px;
+  font-size: clamp(27px, 5vw, 34px);
+  line-height: 1.15;
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.04em;
 }
 
 .lema {
-  margin: 6px 0 0;
+  margin: 9px 0 0;
   color: var(--gris);
-  font-size: 16px;
+  font-size: 15px;
+  line-height: 1.55;
 }
 
 .hoy {
-  margin: 8px 0 0;
+  margin: 14px 0 0;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -44,16 +48,18 @@
 
 /* ── Banner de estado del formulario ── */
 .banner {
-  margin-top: 20px;
+  margin-top: 22px;
   display: flex;
-  gap: 10px;
+  gap: 12px;
   align-items: flex-start;
-  padding: 12px 14px;
-  border-radius: 10px;
+  padding: 15px 16px;
+  border: 1px solid #dcebdd;
+  border-radius: 13px;
   background: var(--verde-suave);
   color: var(--verde-texto);
-  font-size: 14px;
-  line-height: 20px;
+  font-size: 13px;
+  line-height: 1.55;
+  box-shadow: 0 4px 12px rgb(34 61 43 / 3%);
 }
 
 .banner svg {
@@ -70,25 +76,33 @@
 }
 
 .bannerError {
+  border-color: #f0d2cb;
   background: var(--rojo-suave);
   color: var(--rojo);
 }
 
 /* ── Campos ── */
 .form {
-  margin-top: 20px;
+  margin-top: 24px;
   display: grid;
-  gap: 18px;
+  gap: 19px;
 }
 
 .campo {
   display: grid;
-  gap: 6px;
+  gap: 7px;
+}
+
+.fechaHora {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr);
+  gap: 16px;
 }
 
 .etiqueta {
   font-weight: 700;
-  font-size: 15px;
+  font-size: 13px;
+  color: #344a3a;
 }
 
 .opcional {
@@ -102,15 +116,16 @@
 
 .entrada {
   width: 100%;
-  min-height: 52px;
-  padding: 12px 14px;
+  min-height: 53px;
+  padding: 12px 15px;
   border: 1px solid var(--borde);
-  border-radius: 10px;
-  background: #ffffff;
+  border-radius: 12px;
+  background: #fbfcfb;
   color: var(--tinta);
   font: inherit;
   font-size: 16px;
   resize: vertical;
+  transition: border-color 150ms ease, box-shadow 150ms ease, background 150ms ease;
 }
 
 .conIcono {
@@ -122,9 +137,10 @@
 }
 
 .entrada:focus-visible {
-  outline: 2px solid var(--verde);
-  outline-offset: 1px;
   border-color: var(--verde);
+  outline: 0;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgb(57 128 91 / 12%);
 }
 
 .iconoCampo {
@@ -135,16 +151,51 @@
   pointer-events: none;
 }
 
+.selectorBoton {
+  position: absolute;
+  top: 50%;
+  right: 7px;
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  padding: 0;
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: 10px;
+  background: #edf5ee;
+  color: var(--verde-texto);
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.selectorBoton:hover {
+  background: #dcecdf;
+  color: var(--verde-hover);
+}
+
+.selectorBoton:focus-visible {
+  outline: 2px solid var(--verde);
+  outline-offset: 2px;
+}
+
+.control input[type="date"],
+.control input[type="time"] {
+  cursor: pointer;
+}
+
 .conError .entrada {
   border-color: var(--rojo);
+  box-shadow: 0 0 0 3px rgb(163 49 32 / 8%);
 }
 
 .conError .iconoCampo {
   color: var(--rojo);
 }
 
-/* El reloj propio del navegador ocupa el lugar del ícono del diseño. */
-.control input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+/* Mantiene activo el selector nativo bajo los íconos visuales del campo. */
+.control input[type="date"]::-webkit-calendar-picker-indicator,
+.control input[type="time"]::-webkit-calendar-picker-indicator {
   opacity: 0;
   cursor: pointer;
 }
@@ -175,23 +226,27 @@
 
 .boton {
   width: 100%;
-  min-height: 54px;
+  min-height: 56px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
   border: 0;
-  border-radius: 10px;
-  background: var(--verde);
+  border-radius: 13px;
+  background: linear-gradient(120deg, #286b48, #39865b);
   color: #ffffff;
   font: inherit;
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 700;
   cursor: pointer;
+  box-shadow: 0 10px 22px rgb(40 107 72 / 18%);
+  transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease;
 }
 
 .boton:hover {
-  background: var(--verde-hover);
+  transform: translateY(-1px);
+  background: linear-gradient(120deg, #225e3f, #32794f);
+  box-shadow: 0 13px 25px rgb(40 107 72 / 22%);
 }
 
 .boton:disabled {
@@ -269,11 +324,12 @@
 .resumen {
   margin-top: 20px;
   width: 100%;
-  padding: 16px;
-  border: 1px solid var(--borde);
-  border-radius: 14px;
+  padding: 20px;
+  border: 1px solid #e4e9e4;
+  border-radius: 17px;
   background: #ffffff;
   text-align: left;
+  box-shadow: 0 10px 28px rgb(34 61 43 / 5%);
 }
 
 .resumenTitulo {
@@ -324,7 +380,8 @@
   grid-template-columns: 22px 1fr;
   gap: 10px;
   padding: 14px 16px;
-  border-radius: 12px;
+  border: 1px solid #eee9d9;
+  border-radius: 14px;
   background: var(--crema);
   text-align: left;
 }
@@ -345,4 +402,26 @@
 .gracias {
   margin: 28px 0 12px;
   color: var(--gris);
+}
+
+@media (max-width: 480px) {
+  .form {
+    gap: 17px;
+  }
+
+  .fechaHora {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 17px;
+  }
+
+  .resumen {
+    padding: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .entrada,
+  .boton {
+    transition: none;
+  }
 }

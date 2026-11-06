@@ -1,5 +1,5 @@
 /**
- * Sesión guardada en el navegador.
+ * Sesión guardada en la pestaña actual.
  *
  * El inicio de sesión de la pantalla (#40) guarda aquí el token que devuelve
  * POST /api/v1/auth/login. Mientras esa pantalla no exista, para probar se guarda a mano
@@ -8,11 +8,22 @@
 
 const CLAVE_TOKEN = "rescate.token";
 const CLAVE_COMERCIO = "rescate.comercio_id";
+const EVENTO_SESION = "rescate:sesion-cambiada";
+
+function limpiarSesionCompartidaAnterior(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(CLAVE_TOKEN);
+    window.localStorage.removeItem(CLAVE_COMERCIO);
+  } catch {
+    return;
+  }
+}
 
 function leer(clave: string): string | null {
   if (typeof window === "undefined") return null;
   try {
-    return window.localStorage.getItem(clave);
+    return window.sessionStorage.getItem(clave);
   } catch {
     return null;
   }
@@ -20,7 +31,35 @@ function leer(clave: string): string | null {
 
 /** Token JWT. Si no hay, la API responde 401. */
 export function leerToken(): string | null {
+  limpiarSesionCompartidaAnterior();
   return leer(CLAVE_TOKEN);
+}
+
+export function guardarToken(token: string): void {
+  limpiarSesionCompartidaAnterior();
+  window.sessionStorage.setItem(CLAVE_TOKEN, token);
+  window.dispatchEvent(new Event(EVENTO_SESION));
+}
+
+export function cerrarSesion(): void {
+  limpiarSesionCompartidaAnterior();
+  window.sessionStorage.removeItem(CLAVE_TOKEN);
+  window.sessionStorage.removeItem(CLAVE_COMERCIO);
+  window.dispatchEvent(new Event(EVENTO_SESION));
+}
+
+export function suscribirSesion(cambio: () => void): () => void {
+  window.addEventListener(EVENTO_SESION, cambio);
+  window.addEventListener("storage", cambio);
+  return () => {
+    window.removeEventListener(EVENTO_SESION, cambio);
+    window.removeEventListener("storage", cambio);
+  };
+}
+
+/** Compatibilidad con sesiones antiguas; el formulario usa ahora `/api/v1/auth/me`. */
+export function leerComercioId(): string | null {
+  return leer(CLAVE_COMERCIO);
 }
 
 /** Rol para presentar acciones en la interfaz; la API vuelve a validar permisos en cada petición. */
@@ -37,13 +76,4 @@ export function leerRolToken(): string | null {
   } catch {
     return null;
   }
-}
-
-/**
- * Comercio del usuario que avisa (POST /api/v1/rescates exige `comercio_id`).
- * TODO(#40): la API todavía no expone el comercio del usuario (ni en el token ni en un
- * endpoint). Cuando lo haga, tomarlo de ahí en vez de esta clave del navegador.
- */
-export function leerComercioId(): string | null {
-  return leer(CLAVE_COMERCIO);
 }

@@ -29,15 +29,15 @@ El esquema integrado por el PR #65 contiene `usuarios`, `comercios`, `organizaci
 
 | Entidad o campos | Uso y criterio | Estado al 29-10-2026 |
 |---|---|---|
-| `rescates`: comercio, alimento, cantidad aproximada, lugar y hora límite; `registrado_por`, `creado_en` | CA-01.1 y CA-01.3; identidad del comercio y del actor que registra | Columnas integradas; API y formulario pendientes de integración |
+| `rescates`: comercio, alimento, cantidad aproximada, lugar y hora límite; `registrado_por`, `creado_en` | CA-01.1 y CA-01.3; identidad del comercio y del actor que registra | Columnas, API y formulario integrados |
 | `organizaciones_receptoras`: capacidad, refrigeración, horario, puede recoger | RF-002 y CA-02.1; elegir destino adecuado | Tabla integrada; datos representativos en `docs/datos/cmp02/` |
 | `voluntarios`: usuario, transporte y disponibilidad | RF-006 y CA-02.1/CA-02.3 | Tabla integrada; datos representativos preparados |
 | `organizacion_id`, `voluntario_id`, `asignado_en`, `asignado_por` | CA-02.1; destino, traslado y responsable de asignación | Columnas integradas; operación atómica pendiente (#11) |
 | `recogido_en`, `entregado_en`, `recibido_por`, `cantidad_recibida`, `unidad_recibida`, `es_medida`, `personas_beneficiadas` | CA-04.1–CA-04.3; recepción e impacto trazables | Columnas integradas; validación de transición pendiente |
 | `motivo_no_completado` | CA-03.4; explicación del cierre sin entrega | Columna y CHECK de no nulo integrados |
-| `historial_estados` | CA-03.3, RF-014, RF-015, RNF-011 | Diseño pendiente de implementación en #35 |
+| `historial_estados` | CA-03.3, RF-014, RF-015, RNF-011 | Tabla append-only y endpoint `GET /api/v1/rescates/{id}/historial` implementados; consulta exclusiva de Fundación con actor, rol y orden cronológico |
 
-La organización es la entidad receptora (`rescates.organizacion_id`); quien recibe es una persona autenticada (`rescates.recibido_por` → `usuarios.id`). No son intercambiables. La API debe comprobar que el usuario pertenece a la organización destino. `usuarios.organizacion_id` expresa esa relación. La relación usuario–comercio todavía debe definirse e implementarse en #40/#58: no se debe confiar en un `comercio_id` arbitrario enviado por el cliente.
+La organización es la entidad receptora (`rescates.organizacion_id`); quien recibe es una persona autenticada (`rescates.recibido_por` → `usuarios.id`). No son intercambiables. La API debe comprobar que el usuario pertenece a la organización destino. `usuarios.organizacion_id` expresa esa relación. La relación usuario–comercio se implementa mediante `usuarios.comercio_id`; la API expone la asociación en `/auth/me` y solo permite al rol comercio registrar para su propio comercio.
 
 El esquema inicial no impone todas las reglas de negocio. Por ejemplo, los campos de recepción existentes no sustituyen la validación de estado previo, pertenencia al destino, unidad, condición medida/estimada y fecha de entrega exigida por CA-04.2 y CA-04.4.
 
@@ -60,7 +60,7 @@ RETURNING id;
 
 PostgreSQL serializa las actualizaciones concurrentes de la misma fila y vuelve a comprobar la condición: solo una solicitud puede cambiar un rescate disponible. La API debe distinguir inexistencia (404) de conflicto de asignación (409), validar el rol y las referencias, y no anunciar éxito cuando no se devuelve ninguna fila. No se hace una lectura seguida de una escritura incondicional. #13 debe demostrar exactamente un ganador y que se conserva su voluntario. #11 también contempla un CHECK que exija voluntario en estados asignado, recogido y entregado; no está en la migración inicial.
 
-El historial previsto en #35 contiene `id`, `rescate_id`, `estado_anterior`, `estado_nuevo`, `actor_id`, `ocurrido_en` y `detalle JSONB`. La actualización condicional y el INSERT del historial deben compartir transacción; un fallo del historial revierte el cambio. El rol de aplicación no tendrá UPDATE ni DELETE sobre el historial y debe ser distinto del propietario usado para migraciones. Esta protección y la función `cambiar_estado()` siguen pendientes: no se presentan como capacidades actuales.
+El historial contiene `id`, `rescate_id`, `estado_anterior`, `estado_nuevo`, `actor_id`, `ocurrido_en` y `detalle JSONB`. La actualización condicional y el INSERT del historial comparten transacción; un fallo del historial revierte el cambio. El rol de aplicación no tiene UPDATE ni DELETE sobre el historial y un trigger protege la tabla incluso ante conexiones con privilegios elevados. `cambiar_estado()` centraliza las transiciones y `GET /api/v1/rescates/{id}/historial` expone las filas unidas con `usuarios`, ordenadas por `ocurrido_en ASC, id ASC`, únicamente para Fundación.
 
 ### Matriz de permisos prevista (RF-024 / #40)
 

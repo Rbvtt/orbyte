@@ -8,19 +8,33 @@ from app.deps import CurrentUser, require_role
 from app.schemas.rescates import (
     RescateAsignacionIn,
     RescateAsignacionOut,
+    RescateComercioOut,
     RescateCreate,
     RescateDetalleOut,
+    RescateHistorialOut,
     RescateListaOut,
     RescateNoCompletadoIn,
     RescateNoCompletadoOut,
     RescateOut,
+    RescateReasignacionIn,
+    RescateRecepcionIn,
+    RescateUpdate,
 )
 from app.services.rescates import (
+    ConflictoEstadoRescate,
     ConflictoAsignacion,
     RecursoAsignacionNoEncontrado,
+    RescateNoEditable,
     RescateNoEncontrado,
     asignar_rescate_con_historial,
+    cancelar_aviso_comercio,
+    confirmar_recepcion_organizacion,
     crear_rescate,
+    editar_aviso_comercio,
+    marcar_entregado_por_voluntario,
+    listar_avisos_comercio,
+    listar_asignaciones_usuario,
+    listar_historial_rescate,
     listar_rescates_activos,
     marcar_no_completado,
     obtener_detalle_rescate,
@@ -62,6 +76,99 @@ def create_rescate(
     return RescateOut.model_validate(rescate)
 
 
+@router.get("/mis-avisos", response_model=list[RescateComercioOut])
+def list_comercio_avisos(
+    current_user: CurrentUser = Depends(require_role("comercio")),
+    db: Session = Depends(get_db),
+) -> list[RescateComercioOut]:
+    if current_user.comercio_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tu usuario no tiene un comercio asociado",
+        )
+    return [
+        RescateComercioOut.model_validate(item)
+        for item in listar_avisos_comercio(db, current_user.comercio_id)
+    ]
+
+
+@router.get("/mis-asignaciones", response_model=list[RescateListaOut])
+def list_mis_asignaciones(
+    current_user: CurrentUser = Depends(require_role("voluntario", "organizacion")),
+    db: Session = Depends(get_db),
+) -> list[RescateListaOut]:
+    return [
+        RescateListaOut.model_validate(item)
+        for item in listar_asignaciones_usuario(db, current_user)
+    ]
+
+
+@router.post("/{rescate_id}/entrega-voluntario", status_code=status.HTTP_204_NO_CONTENT)
+def post_entrega_voluntario(
+    rescate_id: UUID,
+    current_user: CurrentUser = Depends(require_role("voluntario")),
+    db: Session = Depends(get_db),
+) -> None:
+    if current_user.usuario_id is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="No autorizado")
+    try:
+        marcar_entregado_por_voluntario(db, rescate_id, current_user.usuario_id)
+    except RescateNoEncontrado:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="El rescate no existe") from None
+    except ConflictoEstadoRescate:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="El rescate ya no está asignado para registrar la entrega",
+        ) from None
+
+
+@router.post("/{rescate_id}/recepcion", status_code=status.HTTP_204_NO_CONTENT)
+def post_recepcion_organizacion(
+    rescate_id: UUID,
+    datos: RescateRecepcionIn,
+    current_user: CurrentUser = Depends(require_role("organizacion")),
+    db: Session = Depends(get_db),
+) -> None:
+    if current_user.usuario_id is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="No autorizado")
+    try:
+        confirmar_recepcion_organizacion(
+            db,
+            rescate_id,
+            current_user.usuario_id,
+            datos.cantidad_recibida,
+            datos.unidad_recibida,
+            datos.es_medida,
+            datos.personas_beneficiadas,
+        )
+    except RescateNoEncontrado:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="El rescate no existe") from None
+    except ConflictoEstadoRescate:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="El rescate todavía no está entregado por el voluntario",
+        ) from None
+
+
+@router.get(
+    "/{rescate_id}/historial",
+    response_model=list[RescateHistorialOut],
+)
+def get_historial_rescate(
+    rescate_id: UUID,
+    _current_user: CurrentUser = Depends(require_role("fundacion")),
+    db: Session = Depends(get_db),
+) -> list[RescateHistorialOut]:
+    try:
+        historial = listar_historial_rescate(db, rescate_id)
+    except RescateNoEncontrado:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="El rescate no existe",
+        ) from None
+    return [RescateHistorialOut.model_validate(item) for item in historial]
+
+
 @router.get(
     "/{rescate_id}",
     response_model=RescateDetalleOut,
@@ -83,15 +190,64 @@ def get_rescate(
     return RescateDetalleOut.model_validate(detalle)
 
 
-@router.patch(
-    "/{rescate_id}/asignacion",
-    response_model=RescateAsignacionOut,
-)
-def assign_rescate(
+@router.patch("/{rescate_id}", response_model=RescateComercioOut)
+def update_comercio_aviso(
     rescate_id: UUID,
-    datos: RescateAsignacionIn,
-    current_user: CurrentUser = Depends(require_role("fundacion")),
+    datos: RescateUpdate,
+    current_user: CurrentUser = Depends(require_role("comercio")),
     db: Session = Depends(get_db),
+) -> RescateComercioOut:
+    if current_user.usuario_id is None or current_user.comercio_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tu usuario no tiene un comercio asociado",
+        )
+    try:
+        rescate = editar_aviso_comercio(
+            db, rescate_id, current_user.comercio_id, current_user.usuario_id, datos
+        )
+    except RescateNoEncontrado:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="El aviso no existe") from None
+    except RescateNoEditable:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Solo puedes editar avisos disponibles que no hayan vencido",
+        ) from None
+    return RescateComercioOut.model_validate(rescate)
+
+
+@router.post("/{rescate_id}/cancelar", response_model=RescateComercioOut)
+def cancel_comercio_aviso(
+    rescate_id: UUID,
+    current_user: CurrentUser = Depends(require_role("comercio")),
+    db: Session = Depends(get_db),
+) -> RescateComercioOut:
+    if current_user.usuario_id is None or current_user.comercio_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tu usuario no tiene un comercio asociado",
+        )
+    try:
+        rescate = cancelar_aviso_comercio(
+            db, rescate_id, current_user.comercio_id, current_user.usuario_id
+        )
+    except RescateNoEncontrado:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="El aviso no existe") from None
+    except RescateNoEditable:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Solo puedes cancelar avisos disponibles que no hayan vencido",
+        ) from None
+    return RescateComercioOut.model_validate(rescate)
+
+
+def _guardar_asignacion(
+    rescate_id: UUID,
+    datos: RescateAsignacionIn | RescateReasignacionIn,
+    current_user: CurrentUser,
+    db: Session,
+    *,
+    solo_reasignar: bool,
 ) -> RescateAsignacionOut:
     if current_user.usuario_id is None:
         raise RuntimeError("El usuario autenticado no tiene un identificador")
@@ -102,6 +258,8 @@ def assign_rescate(
             datos.voluntario_id,
             datos.organizacion_id,
             current_user.usuario_id,
+            datos.motivo,
+            solo_reasignar=solo_reasignar,
         )
     except RescateNoEncontrado:
         raise HTTPException(
@@ -110,7 +268,7 @@ def assign_rescate(
         ) from None
     except RecursoAsignacionNoEncontrado as exc:
         nombres = {
-            "organizacion_id": "La organización no existe",
+            "organizacion_id": "La organización no existe o no está activa",
             "voluntario_id": "El voluntario no existe o no está activo",
         }
         raise HTTPException(
@@ -118,15 +276,49 @@ def assign_rescate(
             detail=nombres[exc.recurso],
         ) from None
     except ConflictoAsignacion as exc:
-        if exc.voluntario_nombre is None:
-            detail = "El rescate ya no está disponible para asignación"
-        else:
-            detail = f"El rescate ya está asignado al voluntario {exc.voluntario_nombre}"
+        detail = (
+            "El rescate ya no está disponible para reasignación"
+            if solo_reasignar and exc.voluntario_nombre is None
+            else "El rescate ya no está disponible para asignación"
+            if exc.voluntario_nombre is None
+            else f"El rescate ya está asignado al voluntario {exc.voluntario_nombre}"
+        )
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=detail,
         ) from None
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from None
     return RescateAsignacionOut.model_validate(rescate)
+
+
+@router.patch(
+    "/{rescate_id}/asignacion",
+    response_model=RescateAsignacionOut,
+)
+def assign_rescate(
+    rescate_id: UUID,
+    datos: RescateAsignacionIn,
+    current_user: CurrentUser = Depends(require_role("fundacion")),
+    db: Session = Depends(get_db),
+) -> RescateAsignacionOut:
+    return _guardar_asignacion(rescate_id, datos, current_user, db, solo_reasignar=False)
+
+
+@router.patch(
+    "/{rescate_id}/reasignacion",
+    response_model=RescateAsignacionOut,
+)
+def reassign_rescate(
+    rescate_id: UUID,
+    datos: RescateReasignacionIn,
+    current_user: CurrentUser = Depends(require_role("fundacion")),
+    db: Session = Depends(get_db),
+) -> RescateAsignacionOut:
+    return _guardar_asignacion(rescate_id, datos, current_user, db, solo_reasignar=True)
 
 
 @router.post(

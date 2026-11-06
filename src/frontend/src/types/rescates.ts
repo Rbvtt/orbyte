@@ -1,6 +1,6 @@
 /** #37 · Consulta de rescates (app/schemas/rescates.py). */
 
-import type { EstadoRescate } from "./api";
+import type { EstadoRescate, RolUsuario } from "./api";
 
 /** GET /api/v1/rescates?estado=activos (RescateListaOut). */
 export interface RescateLista {
@@ -11,7 +11,24 @@ export interface RescateLista {
   organizacion: string | null;
   voluntario: string | null;
   pendiente_asignar: boolean;
+  origen_aviso: "comercio" | "fundacion";
+  fundacion?: string | null;
+  lugar_recogida?: string | null;
+  lugar_entrega?: string | null;
+  cantidad_aprox?: string | null;
+  estado_visual?: EstadoVisualRescate;
 }
+
+export type EstadoVisualRescate =
+  | "disponible"
+  | "no_disponible"
+  | "asignado"
+  | "recogido"
+  | "entregado"
+  | "no_completado"
+  | "por_recibir"
+  | "entregado_por_voluntario"
+  | "recibido";
 
 /**
  * GET /api/v1/rescates/{id} (RescateDetalleOut, sin los campos vacíos). Los campos dependen del
@@ -21,6 +38,8 @@ export interface RescateLista {
 export interface RescateDetalle {
   id: string;
   estado: EstadoRescate;
+  organizacion_id?: string | null;
+  voluntario_id?: string | null;
   pendiente_asignar: boolean;
   hora_limite?: string;
   comercio?: string;
@@ -31,9 +50,37 @@ export interface RescateDetalle {
   lugar_entrega?: string;
   organizacion?: string;
   voluntario?: string;
+  fundacion?: string;
+  estado_visual?: EstadoVisualRescate;
   asignado_en?: string | null;
   asignado_por?: string;
   observaciones?: string;
+  origen_aviso?: "comercio" | "fundacion";
   /** Solo se entrega a fundación cuando el rescate quedó como no completado. */
   motivo_no_completado?: string;
+}
+
+export interface RescateHistorial {
+  id: number;
+  estado_anterior: EstadoRescate | null;
+  estado_nuevo: EstadoRescate;
+  ocurrido_en: string;
+  actor_id: string;
+  actor_nombre: string;
+  actor_rol: RolUsuario;
+  detalle: Record<string, unknown>;
+}
+
+export interface RescateAvisoComercio {
+  id: string;
+  comercio_id: string;
+  alimento: string;
+  cantidad_aprox: string;
+  lugar_recogida: string;
+  hora_limite: string;
+  observaciones: string | null;
+  estado: EstadoRescate;
+  registrado_por: string;
+  creado_en: string;
+  motivo_no_completado: string | null;
 }

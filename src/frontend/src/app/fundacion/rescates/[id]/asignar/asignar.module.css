@@ -1,0 +1,165 @@
+.pagina {
+  min-height: calc(100dvh - 57px);
+  padding: 38px 20px 60px;
+  background:
+    radial-gradient(ellipse at 86% 0%, rgb(91 163 125 / 10%), transparent 30rem),
+    #f5f7f4;
+}
+
+.contenido {
+  width: min(760px, 100%);
+  margin: 0 auto;
+}
+
+.volver {
+  display: inline-flex;
+  margin-bottom: 18px;
+  color: #286b48;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.volver:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.tarjeta {
+  padding: clamp(24px, 5vw, 40px);
+  border: 1px solid #e3e9e3;
+  border-radius: 22px;
+  background: white;
+  box-shadow: 0 18px 50px rgb(34 61 43 / 7%);
+}
+
+.kicker {
+  color: #39805b;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.tarjeta h1 {
+  margin: 7px 0 0;
+  color: #1b3224;
+  font-size: clamp(27px, 5vw, 35px);
+  letter-spacing: -0.04em;
+}
+
+.descripcion {
+  margin: 8px 0 0;
+  color: #68746b;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.resumen {
+  display: grid;
+  gap: 5px;
+  margin-top: 24px;
+  padding: 16px;
+  border: 1px solid #e8eee8;
+  border-radius: 14px;
+  background: #f8faf8;
+  color: #657168;
+  font-size: 13px;
+}
+
+.resumen strong {
+  color: #27382d;
+  font-size: 15px;
+}
+
+.formulario {
+  display: grid;
+  gap: 17px;
+  margin-top: 22px;
+}
+
+.formulario label {
+  display: grid;
+  gap: 7px;
+  color: #344a3a;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.formulario select,
+.formulario textarea {
+  width: 100%;
+  min-height: 48px;
+  padding: 11px 13px;
+  border: 1px solid #dfe6df;
+  border-radius: 11px;
+  outline: none;
+  background: #fbfcfb;
+  color: #27382c;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.formulario textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.formulario select:focus-visible,
+.formulario textarea:focus-visible {
+  border-color: #39805b;
+  background: white;
+  box-shadow: 0 0 0 4px rgb(57 128 91 / 12%);
+}
+
+.formulario > button {
+  min-height: 49px;
+  border: 0;
+  border-radius: 11px;
+  background: linear-gradient(120deg, #286b48, #39865b);
+  color: white;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.formulario > button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.error,
+.aviso,
+.estado {
+  margin-top: 18px;
+  padding: 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.error {
+  border: 1px solid #f1d2cd;
+  background: #fff2ef;
+  color: #a33120;
+}
+
+.aviso {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #eee1bb;
+  background: #fff9e9;
+  color: #806b45;
+}
+
+.aviso a {
+  color: #286b48;
+  font-weight: 700;
+}
+
+.estado {
+  color: #68746b;
+  text-align: center;
+}

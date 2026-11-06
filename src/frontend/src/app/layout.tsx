@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
+import { TopNavigation } from "@/components/ui/AccionesSesion";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -22,6 +24,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <a href="#contenido" className="sr-only">
           Saltar al contenido
         </a>
+        <Suspense fallback={null}>
+          <TopNavigation />
+        </Suspense>
         <main id="contenido">{children}</main>
       </body>
     </html>

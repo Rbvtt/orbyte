@@ -1,0 +1,380 @@
+.pagina {
+  min-height: calc(100dvh - 57px);
+  padding: 38px 24px 60px;
+  background:
+    radial-gradient(ellipse at 86% 0%, rgb(91 163 125 / 9%), transparent 31rem),
+    #f5f7f6;
+}
+
+.contenido {
+  width: min(1050px, 100%);
+  margin: 0 auto;
+}
+
+.migas {
+  margin-bottom: 20px;
+  color: #78817b;
+  font-size: 13px;
+}
+
+.migas span {
+  margin: 0 8px;
+  color: #adb5ae;
+}
+
+.hero {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 29px 32px;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: linear-gradient(110deg, #fff, var(--primary-soft));
+  box-shadow: 0 15px 40px rgb(46 57 84 / 6%);
+}
+
+.heroIcono {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  flex: 0 0 58px;
+  place-items: center;
+  border-radius: 18px;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.kicker {
+  color: var(--primary);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.hero h1 {
+  margin: 4px 0 5px;
+  color: var(--text);
+  font-size: clamp(25px, 4vw, 33px);
+  line-height: 1.2;
+  letter-spacing: -0.035em;
+}
+
+.hero p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.contador {
+  display: grid;
+  min-width: 76px;
+  justify-items: center;
+  gap: 0;
+  margin-left: auto;
+  padding: 10px 13px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgb(255 255 255 / 75%);
+  color: var(--primary-strong);
+  font-size: 23px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.contador small {
+  margin-top: 4px;
+  color: #78839a;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.error {
+  display: grid;
+  gap: 4px;
+  margin-top: 18px;
+  padding: 14px 17px;
+  border: 1px solid #f1d2cd;
+  border-radius: 13px;
+  background: #fff2ef;
+  color: #a33120;
+  font-size: 13px;
+}
+
+.error strong {
+  font-size: 14px;
+}
+
+.lista {
+  margin-top: 32px;
+}
+
+.listaEncabezado {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 15px;
+}
+
+.listaEncabezado h2 {
+  margin: 0;
+  color: #26352c;
+  font-size: 19px;
+  letter-spacing: -0.025em;
+}
+
+.listaEncabezado p {
+  margin: 5px 0 0;
+  color: #78817b;
+  font-size: 13px;
+}
+
+.listaEncabezado > span {
+  color: #66746a;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.tarjetas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.usuario {
+  display: grid;
+  gap: 18px;
+  padding: 19px;
+  border: 1px solid #e4e9e4;
+  border-radius: 17px;
+  background: white;
+  box-shadow: 0 8px 24px rgb(34 61 43 / 4%);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.usuario:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 13px 30px rgb(34 61 43 / 8%);
+}
+
+.usuarioCabecera {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.avatar {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  place-items: center;
+  border-radius: 14px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.identidad {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.identidad strong {
+  overflow: hidden;
+  color: #28372d;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.identidad span {
+  overflow: hidden;
+  color: #78817b;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rol {
+  margin-left: auto;
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary-strong);
+  font-size: 10px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.motivo {
+  margin: 0;
+  color: #806b45;
+  font-size: 12px;
+}
+
+.acciones {
+  display: flex;
+  gap: 9px;
+  padding-top: 14px;
+  border-top: 1px solid #eef0ee;
+}
+
+.acciones button {
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: background 150ms ease, transform 150ms ease;
+}
+
+.acciones button:hover {
+  transform: translateY(-1px);
+}
+
+.aprobar {
+  border: 1px solid #286b48;
+  background: #286b48;
+  color: white;
+}
+
+.aprobar:hover {
+  background: #20583b;
+}
+
+.rechazar {
+  border: 1px solid #e5e8e5;
+  background: white;
+  color: #68736b;
+}
+
+.rechazar:hover {
+  background: #fff3f1;
+  color: #a33120;
+}
+
+.vacio {
+  display: grid;
+  min-height: 230px;
+  align-content: center;
+  justify-items: center;
+  padding: 28px;
+  border: 1px dashed #dce3dc;
+  border-radius: 18px;
+  background: rgb(255 255 255 / 70%);
+  text-align: center;
+}
+
+.vacioIcono {
+  display: grid;
+  width: 54px;
+  height: 54px;
+  place-items: center;
+  margin-bottom: 13px;
+  border-radius: 17px;
+  background: #e8f2e9;
+  color: #39805b;
+}
+
+.vacio strong {
+  color: #2d4032;
+  font-size: 16px;
+}
+
+.vacio p {
+  margin: 6px 0 0;
+  color: #78817b;
+  font-size: 13px;
+}
+
+.cargando {
+  width: min(520px, 100%);
+  margin: 80px auto;
+  padding: 28px;
+  border: 1px solid #e4e9e4;
+  border-radius: 18px;
+  background: white;
+  color: #66736a;
+  text-align: center;
+  box-shadow: 0 12px 35px rgb(34 61 43 / 6%);
+}
+
+@media (max-width: 720px) {
+  .pagina {
+    padding: 25px 16px 42px;
+  }
+
+  .hero {
+    align-items: flex-start;
+    padding: 23px 20px;
+  }
+
+  .heroIcono {
+    width: 48px;
+    height: 48px;
+    flex-basis: 48px;
+    border-radius: 15px;
+  }
+
+  .contador {
+    min-width: 61px;
+    padding: 8px;
+    font-size: 19px;
+  }
+
+  .tarjetas {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .hero {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .hero > div:nth-child(2) {
+    flex: 1 1 calc(100% - 65px);
+  }
+
+  .contador {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-left: 60px;
+  }
+
+  .contador small {
+    margin: 0;
+  }
+
+  .listaEncabezado {
+    align-items: flex-start;
+  }
+
+  .usuario {
+    padding: 16px;
+  }
+
+  .rol {
+    font-size: 9px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .usuario,
+  .acciones button {
+    transition: none;
+  }
+}

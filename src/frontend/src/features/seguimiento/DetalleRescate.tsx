@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from "react";
 import { useParams } from "next/navigation";
+import { useState } from "react";
 import { StatusPill } from "@/components/ui/StatusPill";
 import { referencia } from "@/features/rescates/referencia";
-import { dia, hora, restante } from "@/features/rescates/tiempo";
+import { dia, fechaCompleta, hora, hora24, restante } from "@/features/rescates/tiempo";
 import { useAhora } from "@/features/rescates/useAhora";
 import { rescatesApi } from "@/services/api/rescates";
 import { leerRolToken } from "@/services/api/sesion";
-import type { RescateDetalle } from "@/types/rescates";
+import type { RescateDetalle, RescateHistorial } from "@/types/rescates";
 import styles from "./DetalleRescate.module.css";
 import { useDetalleRescate } from "./useDetalleRescate";
 
@@ -34,10 +34,10 @@ export function DetalleRescate() {
       </div>
     );
   } else {
-    contenido = <Contenido rescate={datos.rescate} recargar={recargarYa} />;
+    contenido = <Contenido rescate={datos.rescate} historial={datos.historial} recargar={recargarYa} />;
   }
 
-  return <div className="page page--narrow">{contenido}</div>;
+  return <main className={styles.pagina}>{contenido}</main>;
 }
 
 /**
@@ -75,10 +75,15 @@ function ErrorDetalle({ status, mensaje, reintentar }: { status: number | null; 
   );
 }
 
-function Contenido({ rescate, recargar }: { rescate: RescateDetalle; recargar: () => void }) {
-  const ahora = useAhora();
-  const activo = rescate.estado === "disponible" || rescate.estado === "asignado";
-  const t = rescate.hora_limite ? restante(rescate.hora_limite, ahora) : null;
+function Contenido({
+  rescate,
+  historial,
+  recargar,
+}: {
+  rescate: RescateDetalle;
+  historial: RescateHistorial[];
+  recargar: () => void;
+}) {
   const esFundacion = leerRolToken() === "fundacion";
   const [motivo, setMotivo] = useState("");
   const [confirmando, setConfirmando] = useState(false);
@@ -100,17 +105,22 @@ function Contenido({ rescate, recargar }: { rescate: RescateDetalle; recargar: (
     }
   }
 
+  const ahora = useAhora();
+  const activo = rescate.estado === "disponible" || rescate.estado === "asignado";
+  const t = rescate.hora_limite ? restante(rescate.hora_limite, ahora) : null;
+
   return (
     <>
-      <div className="title-row">
+      <div className={`title-row ${styles.encabezado}`}>
         <div>
+          <span className={styles.kicker}>Seguimiento de donación</span>
           <h1>{rescate.alimento ?? "Datos del traslado"}</h1>
           <p className={styles.sub}>
             <span className="num">Rescate {referencia(rescate.id)}</span>
             {rescate.comercio && ` · ${rescate.comercio}`}
           </p>
         </div>
-        <StatusPill estado={rescate.estado} />
+        <StatusPill estado={rescate.estado_visual ?? rescate.estado} />
       </div>
 
       <section className="panel" aria-labelledby="traslado-titulo">
@@ -162,6 +172,12 @@ function Contenido({ rescate, recargar }: { rescate: RescateDetalle; recargar: (
               <dd>{rescate.voluntario}</dd>
             </div>
           )}
+          {rescate.origen_aviso && (
+            <div>
+              <dt>Aviso creado por</dt>
+              <dd>{rescate.origen_aviso === "fundacion" ? "Fundación" : "Comercio"}</dd>
+            </div>
+          )}
           {rescate.observaciones && (
             <div>
               <dt>Observaciones</dt>
@@ -170,6 +186,8 @@ function Contenido({ rescate, recargar }: { rescate: RescateDetalle; recargar: (
           )}
         </dl>
       </section>
+
+      {historial.length > 0 && <LineaTiempo historial={historial} />}
 
       {rescate.motivo_no_completado && (
         <section className="panel" aria-labelledby="motivo-cierre-titulo">
@@ -226,4 +244,58 @@ function Contenido({ rescate, recargar }: { rescate: RescateDetalle; recargar: (
       )}
     </>
   );
+}
+
+function LineaTiempo({ historial }: { historial: RescateHistorial[] }) {
+  return (
+    <section className={`panel ${styles.historial}`} aria-labelledby="historial-titulo">
+      <div className="panel__header">
+        <h2 id="historial-titulo" className={styles.seccion}>
+          Historial del rescate
+        </h2>
+      </div>
+      <ol className={styles.timeline}>
+        {historial.map((transicion) => (
+          <li key={transicion.id} className={styles.evento}>
+            <span className={styles.marcador} aria-hidden="true" />
+            <div className={styles.eventoContenido}>
+              <p className={styles.transicion}>
+                {transicion.estado_anterior
+                  ? `${transicion.estado_anterior} → ${transicion.estado_nuevo}`
+                  : `Creado como ${transicion.estado_nuevo}`}
+              </p>
+              <p className={styles.fecha}>
+                {fechaCompleta(new Date(transicion.ocurrido_en))} · {hora24(new Date(transicion.ocurrido_en))}
+              </p>
+              <p className={styles.actor}>
+                Responsable: <strong>{transicion.actor_nombre}</strong> · {transicion.actor_rol}
+              </p>
+              <DetalleTransicion detalle={transicion.detalle} />
+            </div>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+function DetalleTransicion({ detalle }: { detalle: Record<string, unknown> }) {
+  const entradas = Object.entries(detalle).filter(
+    ([, valor]) => typeof valor === "string" || typeof valor === "number",
+  );
+  if (entradas.length === 0) return null;
+  return (
+    <dl className={styles.detalle}>
+      {entradas.map(([clave, valor]) => (
+        <div key={clave}>
+          <dt>{etiquetaDetalle(clave)}</dt>
+          <dd>{String(valor)}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function etiquetaDetalle(clave: string): string {
+  return clave.replaceAll("_", " ").replace(/^\w/, (letra) => letra.toUpperCase());
 }

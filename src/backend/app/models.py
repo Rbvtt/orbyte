@@ -13,10 +13,18 @@ class Base(DeclarativeBase):
 
 
 class UsuarioRol(str, Enum):
+    ADMINISTRADOR = "administrador"
     FUNDACION = "fundacion"
     VOLUNTARIO = "voluntario"
     ORGANIZACION = "organizacion"
     COMERCIO = "comercio"
+
+
+class UsuarioEstado(str, Enum):
+    PENDIENTE = "pendiente"
+    APROBADO = "aprobado"
+    RECHAZADO = "rechazado"
+    INACTIVO = "inactivo"
 
 
 class RescateEstado(str, Enum):
@@ -64,6 +72,17 @@ class Usuario(Base):
     email: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String, nullable=False)
     rol: Mapped[UsuarioRol] = mapped_column(postgres_enum(UsuarioRol, "usuario_rol"), nullable=False)
+    estado: Mapped[UsuarioEstado] = mapped_column(
+        postgres_enum(UsuarioEstado, "usuario_estado"),
+        nullable=False,
+        default=UsuarioEstado.APROBADO,
+    )
+    motivo_rechazo: Mapped[str | None] = mapped_column(Text)
+    estado_actualizado_por: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("usuarios.id"),
+    )
+    estado_actualizado_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     organizacion_id: Mapped[UUID | None] = mapped_column(
         PostgreSQLUUID(as_uuid=True),
         ForeignKey("organizaciones_receptoras.id"),

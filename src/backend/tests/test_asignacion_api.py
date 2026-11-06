@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -42,7 +42,11 @@ def asignacion_data(real_db):
         refrigeracion=True,
         horario_recepcion="08:00-17:00",
     )
+    real_db.add_all([comercio, organizacion])
+    real_db.flush()
     fundacion = _usuario(UsuarioRol.FUNDACION, "Fundacion de prueba")
+    usuario_organizacion = _usuario(UsuarioRol.ORGANIZACION, "Usuario de organización")
+    usuario_organizacion.organizacion_id = organizacion.id
     voluntario = _usuario(UsuarioRol.VOLUNTARIO, "Voluntario ganador")
     otro_voluntario = _usuario(UsuarioRol.VOLUNTARIO, "Voluntario alterno")
     roles = [
@@ -52,9 +56,8 @@ def asignacion_data(real_db):
     ]
     real_db.add_all(
         [
-            comercio,
-            organizacion,
             fundacion,
+            usuario_organizacion,
             voluntario,
             otro_voluntario,
             *roles,
@@ -68,7 +71,7 @@ def asignacion_data(real_db):
         alimento="Pan",
         cantidad_aprox="20 unidades",
         lugar_recogida="Calle 1",
-        hora_limite=datetime(2026, 10, 28, 23, 0, tzinfo=timezone.utc),
+        hora_limite=datetime.now(timezone.utc) + timedelta(days=1),
         registrado_por=fundacion.id,
         estado=RescateEstado.DISPONIBLE,
     )
@@ -134,6 +137,79 @@ def test_patch_asigna_y_registra_historial(api_client, asignacion_data):
     assert historial[0].cambiado_por == asignacion_data.fundacion.id
 
 
+def test_historial_devuelve_transiciones_actor_y_rol(api_client, asignacion_data):
+    response = api_client.patch(
+        f"/api/v1/rescates/{asignacion_data.rescate.id}/asignacion",
+        headers=_headers(asignacion_data.fundacion),
+        json=_payload(asignacion_data),
+    )
+    assert response.status_code == 200
+
+    historial = api_client.get(
+        f"/api/v1/rescates/{asignacion_data.rescate.id}/historial",
+        headers=_headers(asignacion_data.fundacion),
+    )
+
+    assert historial.status_code == 200
+    body = historial.json()
+    assert body == [
+        {
+            "id": body[0]["id"],
+            "estado_anterior": "disponible",
+            "estado_nuevo": "asignado",
+            "ocurrido_en": body[0]["ocurrido_en"],
+            "actor_id": str(asignacion_data.fundacion.id),
+            "actor_nombre": asignacion_data.fundacion.nombre,
+            "actor_rol": "fundacion",
+            "detalle": {},
+        }
+    ]
+
+
+@pytest.mark.parametrize("rol_index", [0, 1, 2])
+def test_historial_rechaza_roles_distintos_de_fundacion(
+    api_client, asignacion_data, rol_index
+):
+    response = api_client.get(
+        f"/api/v1/rescates/{asignacion_data.rescate.id}/historial",
+        headers=_headers(asignacion_data.roles[rol_index]),
+    )
+
+    assert response.status_code == 403
+
+
+def test_historial_inexistente_devuelve_404(api_client, asignacion_data):
+    response = api_client.get(
+        f"/api/v1/rescates/{uuid4()}/historial",
+        headers=_headers(asignacion_data.fundacion),
+    )
+
+    assert response.status_code == 404
+
+
+def test_patch_rechaza_rescate_vencido(api_client, asignacion_data):
+    asignacion_data.rescate.hora_limite = datetime.now(timezone.utc) - timedelta(minutes=1)
+    asignacion_data.db.commit()
+
+    response = api_client.patch(
+        f"/api/v1/rescates/{asignacion_data.rescate.id}/asignacion",
+        headers=_headers(asignacion_data.fundacion),
+        json=_payload(asignacion_data),
+    )
+
+    assert response.status_code == 409
+    assert "no está disponible" in response.json()["detail"]
+    asignacion_data.db.expire_all()
+    rescate = asignacion_data.db.get(Rescate, asignacion_data.rescate.id)
+    assert rescate.estado == RescateEstado.DISPONIBLE
+    assert rescate.voluntario_id is None
+    assert not asignacion_data.db.scalars(
+        select(RescateHistorial).where(
+            RescateHistorial.rescate_id == asignacion_data.rescate.id
+        )
+    ).all()
+
+
 def test_patch_en_conflicto_devuelve_nombre_y_no_cambia_fila(
     api_client, asignacion_data
 ):
@@ -162,6 +238,121 @@ def test_patch_en_conflicto_devuelve_nombre_y_no_cambia_fila(
     after = asignacion_data.db.get(Rescate, asignacion_data.rescate.id)
     assert after.voluntario_id == asignacion_data.voluntario.id
     assert after.asignado_en == before_assigned_at
+
+
+def test_reasignacion_explicita_guarda_motivo_y_historial(api_client, asignacion_data):
+    url = f"/api/v1/rescates/{asignacion_data.rescate.id}/asignacion"
+    response = api_client.patch(
+        url,
+        headers=_headers(asignacion_data.fundacion),
+        json=_payload(asignacion_data),
+    )
+    assert response.status_code == 200
+
+    response = api_client.patch(
+        f"/api/v1/rescates/{asignacion_data.rescate.id}/reasignacion",
+        headers=_headers(asignacion_data.fundacion),
+        json={
+            "organizacion_id": str(asignacion_data.organizacion.id),
+            "voluntario_id": str(asignacion_data.otro_voluntario.id),
+            "motivo": "El voluntario original no puede acudir",
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["voluntario_id"] == str(asignacion_data.otro_voluntario.id)
+
+    historial = asignacion_data.db.scalars(
+        select(RescateHistorial)
+        .where(RescateHistorial.rescate_id == asignacion_data.rescate.id)
+        .order_by(RescateHistorial.id)
+    ).all()
+    assert len(historial) == 2
+    assert historial[1].estado_anterior == RescateEstado.ASIGNADO
+    assert historial[1].estado_nuevo == RescateEstado.ASIGNADO
+    assert historial[1].detalle == {
+        "voluntario_anterior": str(asignacion_data.voluntario.id),
+        "voluntario_nuevo": str(asignacion_data.otro_voluntario.id),
+        "motivo": "El voluntario original no puede acudir",
+        "reasignado_por": str(asignacion_data.fundacion.id),
+    }
+
+
+def test_reasignacion_exige_motivo_y_rescate_previamente_asignado(api_client, asignacion_data):
+    url = f"/api/v1/rescates/{asignacion_data.rescate.id}/reasignacion"
+    falta_motivo = api_client.patch(
+        url,
+        headers=_headers(asignacion_data.fundacion),
+        json=_payload(asignacion_data),
+    )
+    assert falta_motivo.status_code == 422
+
+    no_asignado = api_client.patch(
+        url,
+        headers=_headers(asignacion_data.fundacion),
+        json={
+            **_payload(asignacion_data),
+            "motivo": "Cambio de voluntario",
+        },
+    )
+    assert no_asignado.status_code == 409
+    assert asignacion_data.rescate.estado == RescateEstado.DISPONIBLE
+
+
+def test_detalle_entrega_datos_de_traslado_al_voluntario(api_client, asignacion_data):
+    asignacion = api_client.patch(
+        f"/api/v1/rescates/{asignacion_data.rescate.id}/asignacion",
+        headers=_headers(asignacion_data.fundacion),
+        json=_payload(asignacion_data),
+    )
+    assert asignacion.status_code == 200
+
+    detalle = api_client.get(
+        f"/api/v1/rescates/{asignacion_data.rescate.id}",
+        headers=_headers(asignacion_data.voluntario),
+    )
+    assert detalle.status_code == 200
+    body = detalle.json()
+    assert body["hora_limite"]
+    assert body["lugar_recogida"] == asignacion_data.rescate.lugar_recogida
+    assert body["cantidad_aprox"] == asignacion_data.rescate.cantidad_aprox
+    assert body["lugar_entrega"] == asignacion_data.organizacion.direccion
+    assert "alimento" not in body
+    assert "comercio" not in body
+
+
+def test_asignacion_rechaza_organizacion_inactiva(api_client, asignacion_data):
+    cuenta = asignacion_data.db.scalar(
+        select(Usuario).where(Usuario.organizacion_id == asignacion_data.organizacion.id)
+    )
+    cuenta.activo = False
+    asignacion_data.db.commit()
+
+    response = api_client.patch(
+        f"/api/v1/rescates/{asignacion_data.rescate.id}/asignacion",
+        headers=_headers(asignacion_data.fundacion),
+        json=_payload(asignacion_data),
+    )
+
+    assert response.status_code == 404
+    assert "organización" in response.json()["detail"]
+    asignacion_data.db.expire_all()
+    assert asignacion_data.db.get(Rescate, asignacion_data.rescate.id).estado == RescateEstado.DISPONIBLE
+
+
+def test_asignacion_rechaza_voluntario_inactivo(api_client, asignacion_data):
+    asignacion_data.voluntario.activo = False
+    asignacion_data.db.commit()
+
+    response = api_client.patch(
+        f"/api/v1/rescates/{asignacion_data.rescate.id}/asignacion",
+        headers=_headers(asignacion_data.fundacion),
+        json=_payload(asignacion_data),
+    )
+
+    assert response.status_code == 404
+    assert "voluntario" in response.json()["detail"]
+    asignacion_data.db.expire_all()
+    assert asignacion_data.db.get(Rescate, asignacion_data.rescate.id).estado == RescateEstado.DISPONIBLE
 
 
 @pytest.mark.parametrize(

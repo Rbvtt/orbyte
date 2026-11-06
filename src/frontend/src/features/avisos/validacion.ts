@@ -1,6 +1,6 @@
 /**
  * Lógica del formulario de aviso (#8), sin React. Cinco datos obligatorios con los mensajes
- * del prototipo de #7. La hora límite se escribe en un `datetime-local` y se envía en ISO 8601
+ * del prototipo de #7. La fecha y hora límite se seleccionan por separado y se envían en ISO 8601
  * con la zona de Bogotá (America/Bogota): Colombia no cambia de horario, siempre es UTC-5.
  */
 
@@ -16,7 +16,7 @@ export type FormularioAviso = {
   alimento: string;
   cantidad_aprox: string;
   lugar_recogida: string;
-  /** Valor de un <input type="datetime-local">: "2026-10-30T18:00", hora de Bogotá. */
+  /** Fecha y hora combinadas: "2026-10-30T18:00", hora de Bogotá. */
   hora_limite: string;
   observaciones: string;
 };
@@ -50,25 +50,34 @@ const CAMPO_DESDE_API: Record<string, CampoAviso> = { comercio_id: "comercio" };
 const FORMATO_LOCAL = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
 const MS_BOGOTA = -5 * 60 * 60 * 1000;
 
-/** "2026-10-30T18:00" (datetime-local, hora de Bogotá) → "2026-10-30T18:00:00-05:00". */
+/** "2026-10-30T18:00" (hora de Bogotá) → "2026-10-30T18:00:00-05:00". */
 function aIsoBogota(local: string): string {
   return `${local.slice(0, 16)}:00${DESFASE_BOGOTA}`;
 }
 
-/** Fecha absoluta → valor de datetime-local en hora de Bogotá ("2026-10-30T18:00"). */
+/** Fecha absoluta → valor local en hora de Bogotá ("2026-10-30T18:00"). */
 export function aLocalBogota(fecha: Date): string {
   return new Date(fecha.getTime() + MS_BOGOTA).toISOString().slice(0, 16);
 }
 
-export function validarAviso(form: FormularioAviso, ahora: Date = new Date()): ErroresAviso {
+export function validarAviso(
+  form: FormularioAviso,
+  ahora: Date = new Date(),
+  requiereComercio = true,
+): ErroresAviso {
   const errores: ErroresAviso = {};
-  for (const campo of ["comercio", "alimento", "cantidad_aprox", "lugar_recogida"] as const) {
+  if (requiereComercio && !form.comercio.trim()) {
+    errores.comercio = MENSAJES_FALTANTE.comercio;
+  }
+  for (const campo of ["alimento", "cantidad_aprox", "lugar_recogida"] as const) {
     if (!form[campo].trim()) errores[campo] = MENSAJES_FALTANTE[campo];
   }
   if (!form.hora_limite) {
     errores.hora_limite = MENSAJES_FALTANTE.hora_limite;
   } else if (!FORMATO_LOCAL.test(form.hora_limite) || Number.isNaN(new Date(aIsoBogota(form.hora_limite)).getTime())) {
     errores.hora_limite = "Escribe una fecha y hora válidas.";
+  } else if (form.hora_limite.slice(0, 4) !== aLocalBogota(ahora).slice(0, 4)) {
+    errores.hora_limite = "El año de la fecha límite debe ser el actual.";
   } else if (new Date(aIsoBogota(form.hora_limite)).getTime() <= ahora.getTime()) {
     errores.hora_limite = "Esa hora ya pasó. Indica una hora posterior a la actual.";
   }

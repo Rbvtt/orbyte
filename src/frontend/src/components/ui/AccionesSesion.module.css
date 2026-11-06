@@ -1,0 +1,63 @@
+.barra {
+  position: sticky;
+  z-index: 20;
+  top: 0;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px max(16px, calc((100vw - 1100px) / 2));
+  border-bottom: 1px solid rgb(39 86 55 / 9%);
+  background: rgb(255 255 255 / 92%);
+  box-shadow: 0 3px 14px rgb(34 61 43 / 3%);
+  backdrop-filter: blur(14px);
+}
+
+.boton {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 14px;
+  border: 1px solid #e0e7e0;
+  border-radius: 11px;
+  background: #fff;
+  color: #355340;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgb(29 43 36 / 4%);
+  transition: background 150ms ease, border-color 150ms ease, transform 150ms ease;
+}
+
+.boton:hover {
+  transform: translateY(-1px);
+  border-color: #bed4c3;
+  background: #f5faf5;
+}
+
+.boton:focus-visible {
+  outline: 2px solid #39805b;
+  outline-offset: 2px;
+}
+
+@media (max-width: 480px) {
+  .barra {
+    padding: 7px 12px;
+  }
+
+  .boton {
+    min-height: 38px;
+    padding: 0 11px;
+    font-size: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boton {
+    transition: none;
+  }
+}
