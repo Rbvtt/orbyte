@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import { IconoBuscar, IconoCalendario, IconoChevron, IconoInfo } from "@/components/ui/Iconos";
 import { StatusPill } from "@/components/ui/StatusPill";
+import { sesionApi } from "@/services/api/sesionApi";
 import {
   agrupar,
   contar,
@@ -28,15 +30,36 @@ import { useRescatesActivos, type FilaRescate } from "./useRescatesActivos";
  * estado en texto, agrupados por estado y con los pendientes de asignar resaltados.
  */
 export function RescatesActivos() {
+  const router = useRouter();
   const { rescates, error, actualizadoEn, actualizar } = useRescatesActivos();
   const ahora = useAhora();
   const [busqueda, setBusqueda] = useState("");
   const [estado, setEstado] = useState<EstadoVisible | "todos">("todos");
+  const [autorizado, setAutorizado] = useState(false);
+
+  useEffect(() => {
+    let activo = true;
+    sesionApi.me().then((usuario) => {
+      if (!activo) return;
+      if (usuario.rol !== "fundacion") {
+        router.replace("/home");
+        return;
+      }
+      setAutorizado(true);
+    }).catch(() => router.replace("/login"));
+    return () => {
+      activo = false;
+    };
+  }, [router]);
 
   const todos = useMemo(() => rescates ?? [], [rescates]);
   const conteo = useMemo(() => contar(todos, ahora), [todos, ahora]);
   const visibles = useMemo(() => filtrar(todos, busqueda, estado, ahora), [todos, busqueda, estado, ahora]);
   const grupos = useMemo(() => agrupar(visibles, ahora), [visibles, ahora]);
+
+  if (!autorizado) {
+    return <p className="page" role="status">Verificando acceso…</p>;
+  }
 
   return (
     <div className="page">
@@ -159,6 +182,7 @@ function Tabla({ grupos, ahora }: { grupos: Grupo[]; ahora: Date }) {
           <tr>
             <th scope="col">Alimento y cantidad</th>
             <th scope="col">Comercio</th>
+            <th scope="col">Aviso creado por</th>
             <th scope="col">Destino</th>
             <th scope="col">Voluntario</th>
             <th scope="col">Hora límite¹</th>
@@ -171,7 +195,7 @@ function Tabla({ grupos, ahora }: { grupos: Grupo[]; ahora: Date }) {
           return (
             <tbody key={g.estado}>
               <tr className={styles.grupo}>
-                <th scope="colgroup" colSpan={7}>
+                <th scope="colgroup" colSpan={8}>
                   <button type="button" className={styles.grupoBoton} aria-expanded={abierto} onClick={() => alternar(g.estado)}>
                     <IconoChevron tamano={16} className={abierto ? undefined : styles.girado} />
                     <strong>
@@ -194,6 +218,7 @@ function Fila({ r, ahora }: { r: FilaRescate; ahora: Date }) {
   const limite = detalleHora(r, ahora);
   const estado = estadoVisible(r, ahora);
   const puedeAsignar = estado === "disponible" && r.pendiente_asignar;
+  const puedeReasignar = estado === "asignado" && new Date(r.hora_limite) > ahora;
   return (
     <tr className={puedeAsignar ? styles.pendiente : undefined}>
       <td className={styles.alimento}>
@@ -204,6 +229,11 @@ function Fila({ r, ahora }: { r: FilaRescate; ahora: Date }) {
         </span>
       </td>
       <td className={styles.comercio}>{r.comercio}</td>
+      <td className={styles.origen}>
+        <span className={`${styles.origenPill} ${r.origen_aviso === "fundacion" ? styles.origenFundacion : ""}`}>
+          {r.origen_aviso === "fundacion" ? "Fundación" : "Comercio"}
+        </span>
+      </td>
       <td className={styles.destino}>
         {r.organizacion ?? (
           <span className={styles.falta}>
@@ -230,9 +260,9 @@ function Fila({ r, ahora }: { r: FilaRescate; ahora: Date }) {
         <StatusPill estado={estado} />
       </td>
       <td className={styles.acciones}>
-        {puedeAsignar ? (
+        {puedeAsignar || puedeReasignar ? (
           <Link href={`/fundacion/rescates/${r.id}/asignar`} className="btn btn--primary btn--compact">
-            Asignar
+            {puedeReasignar ? "Reasignar" : "Asignar"}
           </Link>
         ) : estado !== "no_disponible" ? (
           <button type="button" className="btn btn--secondary btn--compact" disabled>

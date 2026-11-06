@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -11,6 +12,7 @@ from app.models import (
     Comercio,
     IdempotencyKey,
     Rescate,
+    RescateEstado,
     RescateHistorial,
     Usuario,
     UsuarioRol,
@@ -319,5 +321,99 @@ def test_usuario_comercio_no_puede_usar_otro_comercio(real_db):
                 json=payload,
             )
         assert response.status_code == 403
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_comerciante_gestiona_solo_sus_avisos_y_cancelacion_conserva_historial(real_db):
+    comercio = Comercio(nombre=f"Comercio propio {uuid4()}", direccion="Calle 1")
+    otro_comercio = Comercio(nombre=f"Comercio ajeno {uuid4()}", direccion="Calle 2")
+    real_db.add_all([comercio, otro_comercio])
+    real_db.flush()
+    usuario = Usuario(
+        id=uuid4(),
+        nombre="Comerciante",
+        email=f"{uuid4()}@example.com",
+        password_hash="irrelevante",
+        rol=UsuarioRol.COMERCIO,
+        comercio_id=comercio.id,
+        activo=True,
+    )
+    otro_usuario = Usuario(
+        id=uuid4(),
+        nombre="Otro comerciante",
+        email=f"{uuid4()}@example.com",
+        password_hash="irrelevante",
+        rol=UsuarioRol.COMERCIO,
+        comercio_id=otro_comercio.id,
+        activo=True,
+    )
+    real_db.add_all([usuario, otro_usuario])
+    real_db.flush()
+
+    def aviso(comercio_id, registrado_por, alimento):
+        return Rescate(
+            comercio_id=comercio_id,
+            alimento=alimento,
+            cantidad_aprox="12 kg",
+            lugar_recogida="Bodega",
+            hora_limite=datetime.now(timezone.utc) + timedelta(days=1),
+            observaciones="",
+            estado=RescateEstado.DISPONIBLE,
+            registrado_por=registrado_por,
+        )
+
+    propio = aviso(comercio.id, usuario.id, "Pan")
+    ajeno = aviso(otro_comercio.id, otro_usuario.id, "Fruta")
+    real_db.add_all([propio, ajeno])
+    real_db.commit()
+
+    app.dependency_overrides[get_db] = lambda: real_db
+    try:
+        with TestClient(app) as test_client:
+            headers = auth_header(usuario)
+            listado = test_client.get("/api/v1/rescates/mis-avisos", headers=headers)
+            assert listado.status_code == 200
+            assert [item["id"] for item in listado.json()] == [str(propio.id)]
+
+            payload = {
+                "alimento": "Pan artesanal",
+                "cantidad_aprox": "15 kg",
+                "lugar_recogida": "Bodega principal",
+                "hora_limite": (datetime.now(timezone.utc) + timedelta(days=2)).isoformat(),
+                "observaciones": "Separar en cajas",
+            }
+            editado = test_client.patch(
+                f"/api/v1/rescates/{propio.id}",
+                headers=headers,
+                json=payload,
+            )
+            assert editado.status_code == 200
+            assert editado.json()["alimento"] == "Pan artesanal"
+
+            ajeno_edit = test_client.patch(
+                f"/api/v1/rescates/{ajeno.id}",
+                headers=headers,
+                json=payload,
+            )
+            assert ajeno_edit.status_code == 404
+
+            cancelado = test_client.post(
+                f"/api/v1/rescates/{propio.id}/cancelar",
+                headers=headers,
+            )
+            assert cancelado.status_code == 200
+            assert cancelado.json()["estado"] == "no_completado"
+            assert cancelado.json()["motivo_no_completado"] == "Cancelado por el comercio"
+
+        historial = real_db.scalars(
+            select(RescateHistorial)
+            .where(RescateHistorial.rescate_id == propio.id)
+            .order_by(RescateHistorial.id)
+        ).all()
+        assert [item.detalle["accion"] for item in historial] == [
+            "edicion_comercio",
+            "cancelacion_comercio",
+        ]
     finally:
         app.dependency_overrides.clear()

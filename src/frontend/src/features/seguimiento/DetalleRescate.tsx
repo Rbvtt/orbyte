@@ -34,7 +34,7 @@ export function DetalleRescate() {
     contenido = <Contenido rescate={datos.rescate} />;
   }
 
-  return <div className="page page--narrow">{contenido}</div>;
+  return <main className={styles.pagina}>{contenido}</main>;
 }
 
 /**
@@ -79,15 +79,16 @@ function Contenido({ rescate }: { rescate: RescateDetalle }) {
 
   return (
     <>
-      <div className="title-row">
+      <div className={`title-row ${styles.encabezado}`}>
         <div>
+          <span className={styles.kicker}>Seguimiento de donación</span>
           <h1>{rescate.alimento ?? "Datos del traslado"}</h1>
           <p className={styles.sub}>
             <span className="num">Rescate {referencia(rescate.id)}</span>
             {rescate.comercio && ` · ${rescate.comercio}`}
           </p>
         </div>
-        <StatusPill estado={rescate.estado} />
+        <StatusPill estado={rescate.estado_visual ?? rescate.estado} />
       </div>
 
       <section className="panel" aria-labelledby="traslado-titulo">
@@ -137,6 +138,12 @@ function Contenido({ rescate }: { rescate: RescateDetalle }) {
             <div>
               <dt>Voluntario</dt>
               <dd>{rescate.voluntario}</dd>
+            </div>
+          )}
+          {rescate.origen_aviso && (
+            <div>
+              <dt>Aviso creado por</dt>
+              <dd>{rescate.origen_aviso === "fundacion" ? "Fundación" : "Comercio"}</dd>
             </div>
           )}
           {rescate.observaciones && (

@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.deps import CurrentUser, require_role
-from app.models import Comercio, OrganizacionReceptora, Usuario, UsuarioRol, Voluntario
+from app.models import Comercio, OrganizacionReceptora, Usuario, UsuarioEstado, UsuarioRol, Voluntario
 from app.schemas.rescates import ComercioOut, OrganizacionOut, VoluntarioOut
 
 
@@ -26,7 +26,15 @@ def list_organizaciones(
     db: Session = Depends(get_db),
 ) -> list[OrganizacionOut]:
     organizaciones = db.scalars(
-        select(OrganizacionReceptora).order_by(OrganizacionReceptora.nombre)
+        select(OrganizacionReceptora)
+        .join(Usuario, Usuario.organizacion_id == OrganizacionReceptora.id)
+        .where(
+            Usuario.rol == UsuarioRol.ORGANIZACION,
+            Usuario.activo.is_(True),
+            Usuario.estado == UsuarioEstado.APROBADO,
+        )
+        .distinct()
+        .order_by(OrganizacionReceptora.nombre)
     ).all()
     return [OrganizacionOut.model_validate(item) for item in organizaciones]
 
@@ -42,6 +50,7 @@ def list_voluntarios(
         .where(
             Usuario.rol == UsuarioRol.VOLUNTARIO,
             Usuario.activo.is_(True),
+            Usuario.estado == UsuarioEstado.APROBADO,
         )
         .order_by(Usuario.nombre)
     ).all()

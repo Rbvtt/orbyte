@@ -1,24 +1,71 @@
+.pagina {
+  width: min(840px, 100%);
+  margin: 0 auto;
+  padding: 38px 24px 64px;
+}
+
+.encabezado {
+  align-items: center;
+  margin-bottom: 23px;
+  padding: 22px 24px;
+  border: 1px solid #e3e9e3;
+  border-radius: 18px;
+  background: linear-gradient(110deg, #fff, #f3f8f3);
+  box-shadow: 0 9px 26px rgb(34 61 43 / 5%);
+}
+
+.encabezado h1 {
+  margin: 5px 0 0;
+  color: #1d3426;
+  font-size: clamp(24px, 4vw, 32px);
+  line-height: 1.2;
+  letter-spacing: -0.035em;
+}
+
+.kicker {
+  color: #39805b;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
 .sub {
-  margin: 4px 0 0;
-  color: var(--muted);
+  margin: 6px 0 0;
+  color: #78827a;
+  font-size: 13px;
 }
 
 .seccion {
   margin: 0;
-  font-size: var(--fs-section);
+  color: #27382c;
+  font-size: 15px;
+  font-weight: 750;
+}
+
+.pagina :global(.panel) {
+  overflow: hidden;
+  border-color: #e3e9e3;
+  border-radius: 17px;
+  box-shadow: 0 12px 30px rgb(34 61 43 / 5%);
+}
+
+.pagina :global(.panel__header) {
+  min-height: 56px;
+  padding: 16px 24px;
 }
 
 .datos {
   margin: 0;
-  padding: 4px 20px 8px;
+  padding: 8px 24px 12px;
 }
 
 .datos > div {
   display: grid;
-  grid-template-columns: 180px 1fr;
-  gap: 16px;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--rule);
+  grid-template-columns: minmax(150px, 0.7fr) minmax(0, 1.3fr);
+  gap: 20px;
+  padding: 17px 0;
+  border-bottom: 1px solid #edf1ed;
 }
 
 .datos > div:last-child {
@@ -26,42 +73,61 @@
 }
 
 .datos dt {
-  color: var(--muted);
+  color: #78827a;
+  font-size: 13px;
 }
 
 .datos dd {
-  margin: 0;
-  font-weight: 500;
   min-width: 0;
+  margin: 0;
+  color: #27382c;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.5;
   overflow-wrap: anywhere;
 }
 
 .direccion,
 .restante {
   display: block;
+  margin-top: 3px;
+  color: #748077;
+  font-size: 12px;
   font-weight: 400;
-  color: var(--muted);
-  font-size: var(--fs-small);
-  margin-top: 2px;
 }
 
 .pendiente {
+  color: #748077;
   font-weight: 400;
-  color: var(--muted);
+}
+
+.urgente {
+  color: #b42318;
+  font-weight: 650;
 }
 
 @media (max-width: 560px) {
+  .pagina {
+    padding: 24px 15px 44px;
+  }
+
+  .encabezado {
+    align-items: flex-start;
+    gap: 12px;
+    padding: 19px 17px;
+  }
+
+  .pagina :global(.panel__header) {
+    padding: 14px 17px;
+  }
+
   .datos {
-    padding: 0 16px 4px;
+    padding: 4px 17px 8px;
   }
 
   .datos > div {
     grid-template-columns: 1fr;
-    gap: 2px;
+    gap: 4px;
+    padding: 13px 0;
   }
-}
-
-.urgente {
-  color: var(--urgente);
-  font-weight: 600;
 }

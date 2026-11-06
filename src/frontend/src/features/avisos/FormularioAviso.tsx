@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   IconoAlerta,
   IconoBalanza,
@@ -42,8 +43,11 @@ type Icono = (p: { className?: string; tamano?: number }) => React.ReactNode;
  * «disponible» (CA-01.1); dato faltante → no se envía y se señala el campo (CA-01.2).
  */
 export function FormularioAviso() {
+  const router = useRouter();
   const { estado, enviar, reiniciar, fallar } = useRegistrarAviso();
   const [form, setForm] = useState<Formulario>(FORMULARIO_VACIO);
+  const [fechaLimite, setFechaLimite] = useState("");
+  const [horaLimite, setHoraLimite] = useState("");
   const [usuario, setUsuario] = useState<UsuarioSesion | null>(null);
   const [comercios, setComercios] = useState<Comercio[]>([]);
   const [comercioId, setComercioId] = useState<string | null>(null);
@@ -52,7 +56,13 @@ export function FormularioAviso() {
   const [errores, setErrores] = useState<ErroresAviso>({});
   const [intentado, setIntentado] = useState(false);
   const refs = useRef<Partial<Record<CampoAviso, HTMLElement | null>>>({});
+  const fechaInput = useRef<HTMLInputElement>(null);
+  const horaInput = useRef<HTMLInputElement>(null);
   const ahora = new Date();
+  const fechaBogota = aLocalBogota(ahora).slice(0, 10);
+  const horaBogota = aLocalBogota(ahora).slice(11, 16);
+  const anioActualBogota = fechaBogota.slice(0, 4);
+  const fechaMaxima = `${anioActualBogota}-12-31`;
 
   useEffect(() => {
     let activo = true;
@@ -60,6 +70,10 @@ export function FormularioAviso() {
       try {
         const actual = await sesionApi.me();
         if (!activo) return;
+        if (actual.rol !== "comercio" && actual.rol !== "fundacion") {
+          router.replace("/home");
+          return;
+        }
         setUsuario(actual);
         if (actual.rol === "comercio") {
           setComercioId(actual.comercio_id);
@@ -78,7 +92,7 @@ export function FormularioAviso() {
     return () => {
       activo = false;
     };
-  }, []);
+  }, [router]);
 
   function cambiar(campo: CampoAviso, valor: string) {
     setForm((f) => ({ ...f, [campo]: valor }));
@@ -88,6 +102,17 @@ export function FormularioAviso() {
   function enfocarPrimero(encontrados: ErroresAviso) {
     const primero = primerCampoConError(encontrados);
     if (primero) refs.current[primero]?.focus();
+  }
+
+  function abrirSelector(input: React.RefObject<HTMLInputElement | null>) {
+    const control = input.current;
+    if (!control) return;
+    if (typeof control.showPicker === "function") {
+      control.showPicker();
+    } else {
+      control.focus();
+      control.click();
+    }
   }
 
   async function alEnviar(evento: React.FormEvent) {
@@ -127,6 +152,8 @@ export function FormularioAviso() {
           comercio={form.comercio.trim()}
           otro={() => {
             setForm(FORMULARIO_VACIO);
+            setFechaLimite("");
+            setHoraLimite("");
             setErrores({});
             setIntentado(false);
             reiniciar();
@@ -264,23 +291,50 @@ export function FormularioAviso() {
           )}
         </Campo>
 
-        <Campo
-          etiqueta="Hora límite"
-          ayuda="Fecha y hora de recogida, en hora de Colombia."
-          error={errores.hora_limite}
-          icono={IconoReloj}
-        >
-          {(props) => (
-            <input
-              {...props}
-              ref={ref("hora_limite")}
-              type="datetime-local"
-              min={aLocalBogota(ahora)}
-              value={form.hora_limite}
-              onChange={(e) => cambiar("hora_limite", e.target.value)}
-            />
-          )}
-        </Campo>
+        <div className={styles.fechaHora}>
+          <Campo
+            etiqueta="Fecha límite"
+            ayuda={`Selecciona una fecha de ${anioActualBogota}.`}
+            selector={{ abrir: () => abrirSelector(fechaInput), etiqueta: "Abrir calendario" }}
+          >
+            {(props) => (
+              <input
+                {...props}
+                ref={fechaInput}
+                type="date"
+                min={fechaBogota}
+                max={fechaMaxima}
+                value={fechaLimite}
+                onChange={(e) => {
+                  const fecha = e.target.value;
+                  setFechaLimite(fecha);
+                  cambiar("hora_limite", fecha && horaLimite ? `${fecha}T${horaLimite}` : "");
+                }}
+              />
+            )}
+          </Campo>
+          <Campo
+            etiqueta="Hora límite"
+            ayuda="Elige la hora en el reloj. Hora de Colombia."
+            error={errores.hora_limite}
+            selector={{ abrir: () => abrirSelector(horaInput), etiqueta: "Abrir reloj" }}
+          >
+            {(props) => (
+              <input
+                {...props}
+                ref={horaInput}
+                type="time"
+                min={fechaLimite === fechaBogota ? horaBogota : undefined}
+                value={horaLimite}
+                onChange={(e) => {
+                  const hora = e.target.value;
+                  setHoraLimite(hora);
+                  cambiar("hora_limite", fechaLimite && hora ? `${fechaLimite}T${hora}` : "");
+                }}
+              />
+            )}
+          </Campo>
+        </div>
 
         <Campo etiqueta="Observaciones" opcional error={errores.observaciones}>
           {(props) => (
@@ -322,6 +376,7 @@ function Campo({
   error,
   icono: Icono,
   opcional = false,
+  selector,
   children,
 }: {
   etiqueta: string;
@@ -329,6 +384,7 @@ function Campo({
   error?: string;
   icono?: Icono;
   opcional?: boolean;
+  selector?: { abrir: () => void; etiqueta: string };
   children: (props: PropsControl) => React.ReactNode;
 }) {
   const id = useId();
@@ -341,12 +397,20 @@ function Campo({
       <div className={`${styles.control} ${error ? styles.conError : ""}`}>
         {children({
           id,
-          className: Icono ? `${styles.entrada} ${styles.conIcono}` : styles.entrada,
+          className: Icono || selector ? `${styles.entrada} ${styles.conIcono}` : styles.entrada,
           "aria-invalid": error ? true : undefined,
           "aria-describedby": describe,
           "aria-required": opcional ? undefined : true,
         })}
-        {error ? <IconoAlerta className={styles.iconoCampo} /> : Icono ? <Icono className={styles.iconoCampo} /> : null}
+        {selector ? (
+          <button type="button" className={styles.selectorBoton} onClick={selector.abrir} aria-label={selector.etiqueta}>
+            {selector.etiqueta.includes("calendario") ? <IconoCalendario tamano={20} /> : <IconoReloj tamano={20} />}
+          </button>
+        ) : error ? (
+          <IconoAlerta className={styles.iconoCampo} />
+        ) : Icono ? (
+          <Icono className={styles.iconoCampo} />
+        ) : null}
       </div>
       {error ? (
         <p id={`${id}-error`} className={styles.error}>

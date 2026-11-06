@@ -15,7 +15,8 @@ El código de la aplicación vive en `src/`: el backend (FastAPI) en `src/backen
 
 1. Copia `.env.example` como `.env` en la raíz del repositorio y completa `DATABASE_URL` y `JWT_SECRET`.
 2. El archivo `.env` está en `.gitignore` y nunca se sube al repositorio.
-3. En producción las variables se configuran solo en los paneles de Render (backend: `DATABASE_URL`, `JWT_SECRET`, `JWT_EXPIRES_MIN`, `CORS_ORIGINS`) y Vercel (frontend: `VITE_API_URL`).
+3. En producción las variables se configuran solo en los paneles de Render (backend: `DATABASE_URL`, `JWT_SECRET`, `JWT_EXPIRES_MIN`, `CORS_ORIGINS`, `DEFAULT_ADMIN_EMAIL`, `DEFAULT_ADMIN_PASSWORD`) y Vercel (frontend: `VITE_API_URL`).
+4. Al arrancar el backend, si no existe, crea automáticamente un administrador inicial con el correo `marcela@gmail.com` y la contraseña por defecto `Admin123*` para desarrollo. En producción se recomienda cambiarlo desde variables de entorno y luego redefinir la contraseña desde el panel de administración.
 
 ### Backend
 
@@ -45,8 +46,11 @@ npm run dev
 
 La aplicación queda en `http://localhost:5173` (el origen que ya permite `CORS_ORIGINS`) y toma la URL de la API de `VITE_API_URL` en el `.env` de la raíz.
 
-Abre `http://localhost:5173/` para iniciar sesión. La aplicación guarda el
-token de forma local y obtiene el comercio asociado desde `GET /api/v1/auth/me`.
+Abre `http://localhost:5173/` para ver la página pública de Orbyte. Desde allí
+puedes ir al inicio de sesión o al registro. El token de sesión se guarda solo
+en la pestaña actual; abrir una URL protegida en otra pestaña requiere iniciar
+sesión de nuevo. La aplicación obtiene el comercio asociado desde
+`GET /api/v1/auth/me`.
 Los usuarios de fundación seleccionan el comercio desde `GET /api/v1/comercios`;
 los usuarios comercio solo pueden registrar avisos para el comercio asociado a
 su cuenta.
@@ -75,6 +79,18 @@ Un `401` significa que falta el token, es inválido, expiró o las credenciales 
 `GET /api/v1/auth/me` devuelve la identidad, el rol y, si existe, el comercio
 asociado. `GET /api/v1/comercios` requiere rol `fundacion` y devuelve los
 comercios disponibles para registrar avisos.
+
+El rol `administrador` administra cuentas pendientes de fundaciones y
+comercios. No puede registrar avisos ni gestionar aprobaciones de cuentas de
+otros roles.
+
+La fundación puede gestionar únicamente cuentas de comercio desde
+`/home` → **Gestionar comercios**. La pantalla permite consultar su estado,
+datos de contacto, aprobar cuentas pendientes o rechazadas, y desactivar o
+reactivar cuentas aprobadas. La API correspondiente está protegida para el rol
+`fundacion`: `GET /api/v1/fundacion/comercios` y las operaciones
+`POST /api/v1/fundacion/comercios/{usuario_id}/aprobar`,
+`/desactivar` y `/reactivar`.
 
 ### Registro de rescates
 
@@ -108,6 +124,9 @@ La respuesta contiene `id`, `estado: "disponible"`, `registrado_por` y
 `creado_en`, asignados por el servidor. `hora_limite` debe incluir zona
 horaria. Los errores `422` se devuelven directamente como
 `[{"campo": "...", "mensaje": "..."}]`.
+En el formulario del frontend, la fecha y la hora límite se seleccionan con
+los controles de calendario y reloj del dispositivo; el año se restringe al
+año actual.
 
 ### Asignación de rescates
 
@@ -122,15 +141,14 @@ horaria. Los errores `422` se devuelven directamente como
 ```
 
 La operación es atómica y registra la transición `disponible` -> `asignado`
-en `rescate_historial`. El campo `asignado_por` siempre se obtiene del usuario
+en `historial_estados`. El campo `asignado_por` siempre se obtiene del usuario
 autenticado en el token; nunca se acepta desde el body.
 
 - `200`: devuelve el rescate asignado con organización, voluntario,
   `asignado_en` y `asignado_por`.
 - `401`: falta el token o no es válido.
 - `403`: el usuario no tiene rol `fundacion`.
-- `404`: el rescate, la organización o el voluntario no existe o el voluntario
-  está inactivo.
+- `404`: el rescate, la organización o el voluntario no existe o no está activo.
 - `409`: el rescate ya no está disponible; si ya tiene voluntario, el mensaje
   incluye su nombre.
 - `422`: body incompleto o con UUID inválidos.
@@ -138,12 +156,41 @@ autenticado en el token; nunca se acepta desde el body.
 Para poblar la pantalla de asignación, la fundación puede consultar:
 
 - `GET /api/v1/organizaciones`: devuelve `id`, `nombre`, `capacidad_kg`,
-  `refrigeracion` y `horario_recepcion`.
+  `refrigeracion` y `horario_recepcion` de organizaciones con cuenta aprobada
+  y activa.
 - `GET /api/v1/voluntarios`: devuelve `id`, `nombre`, `medio_transporte` y
-  `disponibilidad` de usuarios voluntarios activos.
+  `disponibilidad` de usuarios voluntarios activos y aprobados.
 
 Ambos listados requieren rol `fundacion` y no exponen correos, hashes de
 contraseña ni otros datos sensibles.
+
+Si el voluntario asignado no puede acudir, `PATCH
+/api/v1/rescates/{id}/reasignacion` permite reemplazarlo mientras el rescate no
+haya vencido. Requiere `organizacion_id`, `voluntario_id` y un `motivo`
+obligatorio; conserva la asignación anterior, la nueva, el motivo y el actor en
+el historial. Solo se puede reasignar un rescate ya asignado.
+
+El voluntario asignado puede consultar en `GET /api/v1/rescates/{id}` la hora
+límite, el lugar de recogida, la cantidad y el lugar de entrega. Los demás
+roles no reciben esos datos del traslado.
+
+### Avisos propios del comercio
+
+Desde `/home` → **Gestionar mis avisos**, un comercio puede consultar sus
+avisos, su estado y el seguimiento. Solo puede editar o cancelar avisos propios
+que sigan `disponible` y no hayan vencido:
+
+- `GET /api/v1/rescates/mis-avisos`: lista exclusivamente los avisos del
+  comercio asociado a la sesión.
+- `PATCH /api/v1/rescates/{id}`: actualiza los datos del aviso y agrega el
+  cambio al historial.
+- `POST /api/v1/rescates/{id}/cancelar`: marca el aviso como `no_completado`
+  con motivo `Cancelado por el comercio`, sin borrarlo y preservando el
+  historial.
+
+Los rescates asignados, finalizados o vencidos no pueden editarse ni cancelarse
+por el comercio. Las operaciones también verifican en el backend la propiedad
+del aviso.
 
 ### Consulta y seguimiento de rescates
 
@@ -152,8 +199,9 @@ contraseña ni otros datos sensibles.
 estados `disponible`, `asignado` y `recogido`, ordenados por `hora_limite`
 ascendente. Cada elemento incluye `id`, estado, hora límite, comercio,
 organización, voluntario y el campo calculado `pendiente_asignar`, que es
-`true` únicamente cuando el estado es `disponible`. Los datos completos del
-traslado no se incluyen en el listado.
+`true` únicamente cuando el estado es `disponible`. También incluye
+`origen_aviso` (`comercio` o `fundacion`) para identificar quién registró el
+aviso. Los datos completos del traslado no se incluyen en el listado.
 
 `GET /api/v1/rescates/{id}` requiere autenticación y aplica estos permisos:
 

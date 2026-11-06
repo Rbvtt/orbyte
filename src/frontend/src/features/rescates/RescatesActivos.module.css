@@ -6,7 +6,17 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px 24px;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  padding: 8px 0 18px;
+  border-bottom: 1px solid #e2e8e2;
+}
+
+.cabecera h1 {
+  margin: 0;
+  color: #1d3426;
+  font-size: clamp(25px, 4vw, 32px);
+  line-height: 1.2;
+  letter-spacing: -0.035em;
 }
 
 .subtitulo {
@@ -44,9 +54,10 @@
   padding: 0;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-card);
+  gap: 10px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
 }
 
 .resumen li {
@@ -55,11 +66,10 @@
   align-items: center;
   gap: 4px 8px;
   padding: 16px;
-  border-left: 1px solid var(--border);
-}
-
-.resumen li:first-child {
-  border-left: 0;
+  border: 1px solid #e5e9e5;
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 5px 16px rgb(34 61 43 / 4%);
 }
 
 .resumenTitulo {
@@ -100,6 +110,10 @@
   align-items: center;
   gap: 12px;
   margin-bottom: 16px;
+  padding: 14px;
+  border: 1px solid #e6eae6;
+  border-radius: 15px;
+  background: #fff;
 }
 
 .buscar {
@@ -131,6 +145,7 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 8px 16px;
+  background: linear-gradient(110deg, #fff, #f8faf8);
 }
 
 .panelCabecera p {
@@ -165,6 +180,7 @@
 
 .marcoTabla {
   overflow-x: auto;
+  border-radius: 0 0 var(--radius-card) var(--radius-card);
 }
 
 .tabla {
@@ -178,7 +194,7 @@
   font-size: var(--fs-small);
   font-weight: 500;
   color: var(--muted);
-  background: var(--raised);
+  background: #f5f8f5;
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
@@ -187,6 +203,10 @@
   padding: 12px;
   vertical-align: top;
   border-bottom: 1px solid var(--rule);
+}
+
+.tabla tbody tr:not(.grupo):hover {
+  background: #fbfdfb;
 }
 
 .grupo th {
@@ -223,6 +243,26 @@
 .voluntario .sub,
 .hora .sub {
   white-space: nowrap;
+}
+
+.origenPill {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  padding: 2px 9px;
+  border: 1px solid #d5e8d8;
+  border-radius: 999px;
+  background: #edf7ee;
+  color: #286544;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.origenFundacion {
+  border-color: #dce1f0;
+  background: #f0f2fa;
+  color: #4a5d91;
 }
 
 .girado {
@@ -278,9 +318,11 @@
 
 .vacio {
   margin: 0;
-  padding: 32px 20px;
+  padding: 46px 20px;
   text-align: center;
   color: var(--muted);
+  background:
+    radial-gradient(circle at center, #f4f8f4, transparent 70%);
 }
 
 .cargando {
@@ -323,20 +365,21 @@
   }
 
   .resumen {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .resumen li {
-    border-left: 0;
-    border-top: 1px solid var(--border);
-  }
-
-  .resumen li:first-child {
-    border-top: 0;
+    padding: 12px;
   }
 
   .buscar {
     flex-basis: 100%;
+  }
+
+  @media (max-width: 420px) {
+    .resumen {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 
   .grupoBoton {
@@ -371,6 +414,7 @@
     grid-template-areas:
       "alimento estado"
       "comercio comercio"
+      "origen origen"
       "destino destino"
       "voluntario hora"
       "acciones acciones";
@@ -399,6 +443,15 @@
 
   .destino {
     grid-area: destino;
+  }
+
+  .origen {
+    grid-area: origen;
+  }
+
+  .origen::before {
+    content: "Aviso creado por: ";
+    color: var(--muted);
   }
 
   .destino::before {

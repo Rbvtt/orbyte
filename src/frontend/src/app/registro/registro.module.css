@@ -1,0 +1,286 @@
+.pantalla {
+  min-height: calc(100dvh - 57px);
+  padding: 38px 16px 56px;
+  background:
+    radial-gradient(ellipse at 82% 4%, rgb(91 163 125 / 11%), transparent 30rem),
+    #f5f7f4;
+}
+
+.tarjeta {
+  width: min(100%, 620px);
+  margin: 0 auto;
+  padding: clamp(26px, 5vw, 44px);
+  border: 1px solid rgb(34 68 48 / 9%);
+  border-radius: 25px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgb(34 61 43 / 9%);
+}
+
+.marca {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 27px;
+  color: #214f38;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+}
+
+.marcaIcono {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 12px;
+  background: #e8f2e9;
+  color: #287352;
+}
+
+.kicker {
+  color: #39805b;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.tarjeta h1 {
+  margin: 8px 0 0;
+  color: #1b3224;
+  font-size: clamp(28px, 5vw, 36px);
+  line-height: 1.15;
+  letter-spacing: -0.04em;
+}
+
+.descripcion {
+  margin: 9px 0 0;
+  color: #68746b;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.formulario {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 16px;
+  margin-top: 27px;
+}
+
+.campo {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  color: #344a3a;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.campo:nth-child(3),
+.campo:nth-child(4),
+.formulario > button {
+  grid-column: 1 / -1;
+}
+
+.campo input,
+.campo select {
+  width: 100%;
+  min-height: 49px;
+  padding: 0 13px;
+  border: 1px solid #dfe6df;
+  border-radius: 11px;
+  background: #fbfcfb;
+  color: #27382c;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.campo input::placeholder {
+  color: #9aa39b;
+}
+
+.campo input:focus-visible,
+.campo select:focus-visible {
+  border-color: #39805b;
+  outline: 0;
+  background: white;
+  box-shadow: 0 0 0 4px rgb(57 128 91 / 12%);
+}
+
+.formulario > button {
+  min-height: 52px;
+  margin-top: 4px;
+  border-radius: 12px;
+  background: linear-gradient(120deg, #286b48, #39865b);
+  box-shadow: 0 10px 22px rgb(40 107 72 / 18%);
+}
+
+.formulario > button:hover:not(:disabled) {
+  background: linear-gradient(120deg, #225e3f, #32794f);
+}
+
+.error {
+  margin: 20px 0 0;
+  border: 1px solid #f3d0c9;
+  background: #fff1ed;
+  color: #a33120;
+  padding: 12px 14px;
+  border-radius: 11px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.confirmacion {
+  display: grid;
+  justify-items: center;
+  padding: 30px 12px 8px;
+  text-align: center;
+  animation: confirmacionEntrada 420ms ease both;
+}
+
+.confirmacionIcono {
+  display: grid;
+  width: 82px;
+  height: 82px;
+  place-items: center;
+  margin-bottom: 20px;
+  border: 1px solid #cae7d0;
+  border-radius: 50%;
+  background: #eaf7ed;
+  color: #287352;
+  animation: checkEntrada 520ms cubic-bezier(0.2, 0.8, 0.2, 1.2) both;
+}
+
+.confirmacionEtiqueta {
+  color: #39805b;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.confirmacion h2 {
+  margin: 8px 0 0;
+  color: #1b3224;
+  font-size: clamp(24px, 5vw, 31px);
+  line-height: 1.2;
+  letter-spacing: -0.035em;
+}
+
+.confirmacion > p {
+  max-width: 430px;
+  margin: 12px 0 0;
+  color: #68746b;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.botonConfirmacion {
+  display: inline-flex;
+  min-height: 49px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 24px;
+  padding: 0 22px;
+  border-radius: 12px;
+  background: linear-gradient(120deg, #286b48, #39865b);
+  box-shadow: 0 10px 22px rgb(40 107 72 / 18%);
+  color: white;
+  font-size: 14px;
+  font-weight: 750;
+  text-decoration: none;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.botonConfirmacion:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 13px 26px rgb(40 107 72 / 23%);
+}
+
+.confirmacion .notaConfirmacion {
+  max-width: 390px;
+  margin-top: 15px;
+  color: #88928a;
+  font-size: 12px;
+}
+
+.pie {
+  margin: 22px 0 0;
+  padding-top: 17px;
+  border-top: 1px solid #edf0ed;
+  color: #768178;
+  font-size: 13px;
+  text-align: center;
+}
+
+.pie a {
+  color: #286b48;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.pie a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 560px) {
+  .pantalla {
+    padding: 20px 14px 36px;
+  }
+
+  .tarjeta {
+    padding: 25px 20px;
+    border-radius: 21px;
+  }
+
+  .formulario {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 15px;
+  }
+
+  .campo:nth-child(n) {
+    grid-column: auto;
+  }
+
+  .formulario > button {
+    grid-column: auto;
+  }
+}
+
+@keyframes confirmacionEntrada {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes checkEntrada {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confirmacion,
+  .confirmacionIcono {
+    animation: none;
+  }
+
+  .botonConfirmacion {
+    transition: none;
+  }
+}

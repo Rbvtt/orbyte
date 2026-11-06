@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Usuario, UsuarioRol
+from app.models import Usuario, UsuarioEstado, UsuarioRol
 from app.security import decode_token
 
 
@@ -50,7 +50,8 @@ def get_current_user(
         raise _unauthorized() from None
 
     usuario = db.scalar(select(Usuario).where(Usuario.id == user_id))
-    if usuario is None or not usuario.activo:
+    estado = getattr(usuario, "estado", UsuarioEstado.APROBADO)
+    if usuario is None or not getattr(usuario, "activo", True) or estado != UsuarioEstado.APROBADO:
         raise _unauthorized()
 
     return CurrentUser(

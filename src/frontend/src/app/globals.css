@@ -11,11 +11,11 @@
  */
 
 :root {
-  --ground: #f6f7f6;
+  --ground: #f5f7f5;
   --surface: #ffffff;
   --raised: #f9faf9;
   --active: #eceeec;
-  --border: #e3e5e3;
+  --border: #e2e8e2;
   --rule: #eff1ef;
   --control: #c9cdc9;
 
@@ -23,8 +23,10 @@
   --muted: #5b605b;
   --faint: #6b706b;
 
-  --primary: #1b1e1b;
-  --primary-hover: #333733;
+  --primary: #286b48;
+  --primary-hover: #20583b;
+  --primary-soft: #e5f1e9;
+  --primary-strong: #174a35;
   --on-primary: #ffffff;
 
   /* Estados del rescate: tinte pálido con tinta oscura del mismo tono. */
@@ -48,8 +50,8 @@
 
   --focus: #1b5fd1;
 
-  --radius-card: 8px;
-  --radius-control: 6px;
+  --radius-card: 14px;
+  --radius-control: 10px;
   --radius-chip: 999px;
 
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -124,7 +126,7 @@ textarea {
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 24px 24px 64px;
+  padding: 30px 24px 64px;
 }
 
 .page--narrow {
@@ -178,6 +180,7 @@ textarea {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
+  box-shadow: 0 8px 26px rgb(34 61 43 / 4%);
 }
 
 .panel__header {
@@ -185,8 +188,9 @@ textarea {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 14px 20px;
+  padding: 16px 20px;
   border-bottom: 1px solid var(--rule);
+  background: linear-gradient(110deg, #fff, #f8faf8);
 }
 
 .panel__header h2 {
@@ -219,17 +223,20 @@ textarea {
   font-weight: 600;
   text-decoration: none;
   cursor: pointer;
-  transition: background-color 150ms ease, border-color 150ms ease;
+  transition: background-color 150ms ease, border-color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
   white-space: nowrap;
 }
 
 .btn--primary {
   background: var(--primary);
   color: var(--on-primary);
+  box-shadow: 0 6px 15px rgb(40 107 72 / 16%);
 }
 
 .btn--primary:hover {
+  transform: translateY(-1px);
   background: var(--primary-hover);
+  box-shadow: 0 9px 18px rgb(40 107 72 / 20%);
 }
 
 .btn--secondary {
@@ -240,6 +247,7 @@ textarea {
 
 .btn--secondary:hover {
   border-color: var(--text);
+  background: #f8faf8;
 }
 
 .btn--ghost {
@@ -304,8 +312,9 @@ textarea {
   padding: 0 14px;
   border: 1px solid var(--control);
   border-radius: var(--radius-control);
-  background: var(--surface);
+  background: #fbfcfb;
   font-size: 16px;
+  transition: border-color 150ms ease, box-shadow 150ms ease, background 150ms ease;
 }
 
 .textarea {
@@ -318,6 +327,15 @@ textarea {
 .select:hover,
 .textarea:hover {
   border-color: #9aa09a;
+}
+
+.input:focus-visible,
+.select:focus-visible,
+.textarea:focus-visible {
+  border-color: #39805b;
+  outline: 0;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgb(57 128 91 / 12%);
 }
 
 .input[aria-invalid="true"],
@@ -399,6 +417,22 @@ textarea {
   color: var(--negative);
 }
 
+.pill--por_recibir {
+  background: var(--pendiente-bg);
+  color: var(--pendiente-ink);
+  border-color: var(--pendiente-border);
+}
+
+.pill--entregado_por_voluntario {
+  background: var(--asignado-bg);
+  color: var(--asignado-ink);
+}
+
+.pill--recibido {
+  background: var(--entregado-bg);
+  color: var(--entregado-ink);
+}
+
 .pill--asignado {
   background: var(--asignado-bg);
   color: var(--asignado-ink);
@@ -435,7 +469,7 @@ textarea {
 
 @media (max-width: 640px) {
   .page {
-    padding: 16px 16px 48px;
+    padding: 20px 16px 48px;
   }
 
   .title-row {

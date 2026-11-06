@@ -11,7 +11,7 @@ export interface ErrorCampo {
   mensaje: string;
 }
 
-export type RolUsuario = "fundacion" | "comercio" | "voluntario" | "organizacion";
+export type RolUsuario = "administrador" | "fundacion" | "comercio" | "voluntario" | "organizacion";
 
 export interface UsuarioSesion {
   id: string;
@@ -20,6 +20,30 @@ export interface UsuarioSesion {
   rol: RolUsuario;
   comercio_id: string | null;
   comercio_nombre: string | null;
+  estado?: "pendiente" | "aprobado" | "rechazado" | "inactivo";
+}
+
+export interface UsuarioAdmin {
+  id: string;
+  nombre: string;
+  email: string;
+  rol: RolUsuario;
+  estado: "pendiente" | "aprobado" | "rechazado" | "inactivo";
+  activo: boolean;
+  comercio_id: string | null;
+  organizacion_id: string | null;
+  motivo_rechazo: string | null;
+}
+
+export interface ComercioGestion {
+  id: string;
+  nombre: string;
+  email: string;
+  estado: "pendiente" | "aprobado" | "rechazado" | "inactivo";
+  activo: boolean;
+  direccion: string;
+  telefono: string | null;
+  motivo_rechazo: string | null;
 }
 
 export interface Comercio {
@@ -27,4 +51,19 @@ export interface Comercio {
   nombre: string;
   direccion: string;
   telefono: string | null;
+}
+
+export interface OrganizacionReceptora {
+  id: string;
+  nombre: string;
+  capacidad_kg: number | null;
+  refrigeracion: boolean;
+  horario_recepcion: string | null;
+}
+
+export interface Voluntario {
+  id: string;
+  nombre: string;
+  medio_transporte: string | null;
+  disponibilidad: string | null;
 }

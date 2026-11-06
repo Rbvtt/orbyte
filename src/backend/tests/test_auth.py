@@ -4,25 +4,42 @@ from uuid import uuid4
 
 import jwt
 import pytest
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 from fastapi.testclient import TestClient
 
 from app.database import get_db
 from app.deps import require_role
 from app.main import app
-from app.models import UsuarioRol
+from app.models import Comercio, UsuarioEstado, UsuarioRol
+from app.routers.auth import _validate_admin_managed_account, _validate_comercio, _validate_pending_approval
 from app.security import ALGORITHM, create_access_token, decode_token, hash_password
 
 
 class FakeSession:
-    def __init__(self, user=None):
+    def __init__(self, user=None, target_user=None):
         self.user = user
+        self.target_user = target_user
+        self.added = []
+        self.commits = 0
 
     def scalar(self, _statement):
         return self.user
 
-    def get(self, _model, _identifier):
+    def add(self, instance):
+        self.added.append(instance)
+
+    def flush(self):
+        for instance in self.added:
+            if isinstance(instance, Comercio) and instance.id is None:
+                instance.id = uuid4()
+
+    def get(self, _model, identifier):
+        if self.target_user is not None and self.target_user.id == identifier:
+            return self.target_user
         return self.user
+
+    def commit(self):
+        self.commits += 1
 
 
 def make_user(
@@ -141,6 +158,29 @@ def test_login_normaliza_email(client):
     assert response.status_code == 200
 
 
+def test_registro_comercio_guarda_la_cuenta_y_el_comercio(client):
+    test_client, fake_session = client
+
+    response = test_client.post(
+        "/api/v1/auth/register",
+        json={
+            "nombre": "Tienda de prueba",
+            "email": "tienda@example.com",
+            "password": "secure-password",
+            "rol": "comercio",
+            "direccion": "Calle 1",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"mensaje": "Registro completado", "aprobado": False}
+    assert fake_session.commits == 1
+    assert len(fake_session.added) == 2
+    assert fake_session.added[0].nombre == "Tienda de prueba"
+    assert fake_session.added[1].email == "tienda@example.com"
+    assert fake_session.added[1].comercio_id == fake_session.added[0].id
+
+
 def test_password_hash_no_es_texto_plano():
     password_hash = hash_password("secret")
     assert password_hash.startswith("$argon2")
@@ -220,6 +260,87 @@ def test_require_role_rechaza_rol_invalido():
         require_role("rol_invalido")
     with pytest.raises(ValueError):
         require_role()
+
+
+def test_admin_solo_aprueba_cuentas_pendientes_de_comercio_o_fundacion():
+    cuenta_pendiente = SimpleNamespace(rol=UsuarioRol.COMERCIO, estado=UsuarioEstado.PENDIENTE)
+    _validate_pending_approval(cuenta_pendiente)
+
+    cuenta_de_voluntario = SimpleNamespace(rol=UsuarioRol.VOLUNTARIO, estado=UsuarioEstado.PENDIENTE)
+    with pytest.raises(HTTPException) as error:
+        _validate_pending_approval(cuenta_de_voluntario)
+    assert error.value.status_code == 403
+
+    cuenta_aprobada = SimpleNamespace(rol=UsuarioRol.FUNDACION, estado=UsuarioEstado.APROBADO)
+    with pytest.raises(HTTPException) as error:
+        _validate_pending_approval(cuenta_aprobada)
+    assert error.value.status_code == 409
+
+
+def test_admin_no_puede_gestionar_usuarios_fuera_de_su_alcance():
+    cuenta_de_organizacion = SimpleNamespace(rol=UsuarioRol.ORGANIZACION)
+    with pytest.raises(HTTPException) as error:
+        _validate_admin_managed_account(cuenta_de_organizacion)
+    assert error.value.status_code == 403
+
+
+def test_fundacion_solo_puede_gestionar_cuentas_de_comercios(client):
+    test_client, fake_session = client
+    user = make_user(rol=UsuarioRol.VOLUNTARIO)
+    fake_session.user = user
+    token = create_access_token(sub=str(user.id), rol=user.rol.value)
+
+    response = test_client.get("/api/v1/fundacion/comercios", headers=auth_header(token))
+    assert response.status_code == 403
+
+    with pytest.raises(HTTPException) as error:
+        _validate_comercio(SimpleNamespace(rol=UsuarioRol.FUNDACION))
+    assert error.value.status_code == 403
+
+    _validate_comercio(SimpleNamespace(rol=UsuarioRol.COMERCIO))
+
+
+def test_fundacion_puede_aprobar_desactivar_y_reactivar_comercio(client):
+    test_client, fake_session = client
+    fundacion = make_user(rol=UsuarioRol.FUNDACION)
+    comercio = make_user(rol=UsuarioRol.COMERCIO)
+    comercio.estado = UsuarioEstado.PENDIENTE
+    comercio.motivo_rechazo = None
+    fake_session.user = fundacion
+    fake_session.target_user = comercio
+    headers = auth_header(create_access_token(sub=str(fundacion.id), rol=fundacion.rol.value))
+    url = f"/api/v1/fundacion/comercios/{comercio.id}"
+
+    response = test_client.post(f"{url}/aprobar", headers=headers)
+    assert response.status_code == 200
+    assert comercio.estado == UsuarioEstado.APROBADO
+    assert comercio.estado_actualizado_por == fundacion.id
+
+    response = test_client.post(f"{url}/desactivar", headers=headers)
+    assert response.status_code == 200
+    assert comercio.estado == UsuarioEstado.INACTIVO
+    assert comercio.activo is False
+
+    response = test_client.post(f"{url}/reactivar", headers=headers)
+    assert response.status_code == 200
+    assert comercio.estado == UsuarioEstado.APROBADO
+    assert comercio.activo is True
+
+
+def test_fundacion_no_puede_modificar_otra_cuenta(client):
+    test_client, fake_session = client
+    fundacion = make_user(rol=UsuarioRol.FUNDACION)
+    otra_fundacion = make_user(rol=UsuarioRol.FUNDACION)
+    otra_fundacion.estado = UsuarioEstado.PENDIENTE
+    fake_session.user = fundacion
+    fake_session.target_user = otra_fundacion
+    headers = auth_header(create_access_token(sub=str(fundacion.id), rol=fundacion.rol.value))
+
+    response = test_client.post(
+        f"/api/v1/fundacion/comercios/{otra_fundacion.id}/aprobar",
+        headers=headers,
+    )
+    assert response.status_code == 403
 
 
 def test_secreto_vacio_falla(monkeypatch):

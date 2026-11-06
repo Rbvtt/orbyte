@@ -5,7 +5,8 @@ import { rescatesApi } from "@/services/api/rescates";
 import type { RescateDetalle, RescateLista } from "@/types/rescates";
 
 /** Fila de la tabla: el listado (#37) más alimento, cantidad y hora de asignación del detalle. */
-export type FilaRescate = RescateLista & Pick<RescateDetalle, "alimento" | "cantidad_aprox" | "asignado_en">;
+export type FilaRescate = Omit<RescateLista, "cantidad_aprox"> &
+  Pick<RescateDetalle, "alimento" | "cantidad_aprox" | "asignado_en">;
 
 type Estado = {
   rescates: FilaRescate[] | null;
@@ -38,7 +39,7 @@ export function useRescatesActivos() {
             return { ...r, alimento, cantidad_aprox, asignado_en };
           } catch (error) {
             if ((error as Error).name === "AbortError") throw error;
-            return r; // Sin el detalle la fila se muestra igual, con lo que trae el listado.
+            return { ...r, cantidad_aprox: r.cantidad_aprox ?? undefined };
           }
         }),
       );

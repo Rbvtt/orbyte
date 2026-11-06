@@ -1,13 +1,22 @@
+import logging
+from pathlib import Path
+
+from alembic import command
+from alembic.config import Config
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from app.config import get_settings
-from app.routers.auth import router as auth_router
+from app.database import SessionLocal
+from app.routers.auth import admin_router, fundacion_router, router as auth_router
 from app.routers.catalogos import router as catalogos_router
 from app.routers.rescates import router as rescates_router
+from app.services.bootstrap import ensure_seed_admin
 from app.services.rescates import FieldValidationError
+
+logger = logging.getLogger(__name__)
 
 settings = get_settings()
 
@@ -16,14 +25,42 @@ app = FastAPI(title="Red de Rescate de Alimentos")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 app.include_router(auth_router)
+app.include_router(admin_router)
+app.include_router(fundacion_router)
 app.include_router(catalogos_router)
 app.include_router(rescates_router)
+
+
+def _run_database_migrations() -> None:
+    if not settings.database_url:
+        return
+
+    alembic_cfg = Config(str(Path(__file__).resolve().parents[1] / "alembic.ini"))
+    try:
+        command.upgrade(alembic_cfg, "head")
+    except Exception:
+        logger.warning("No se pudieron aplicar migraciones automáticamente al iniciar la app.", exc_info=True)
+
+
+@app.on_event("startup")
+def startup() -> None:
+    try:
+        _run_database_migrations()
+        db = SessionLocal()
+        try:
+            ensure_seed_admin(db)
+        finally:
+            db.close()
+    except Exception:
+        # En local o en CI sin base de datos disponible, el arranque sigue sin crear el seed.
+        logger.warning("No se pudo inicializar la base de datos al arrancar la app.", exc_info=True)
 
 
 def _validation_message(error: dict, field: str) -> str:

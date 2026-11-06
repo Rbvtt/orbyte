@@ -1,45 +1,113 @@
 /* Cabecera y fondo del prototipo de #7. En pantallas grandes se conserva el ancho de teléfono. */
 .pantalla {
   min-height: 100dvh;
-  background: #fafaf6;
+  padding-bottom: 48px;
+  background:
+    radial-gradient(ellipse at 86% 0%, rgb(91 163 125 / 10%), transparent 29rem),
+    #f5f7f4;
 }
 
 .cabecera {
-  max-width: 480px;
-  margin: 0 auto;
-  min-height: 60px;
-  padding: 0 16px;
+  position: relative;
+  max-width: 720px;
+  min-height: 76px;
+  margin: 20px auto 0;
+  padding: 0 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid #d5ddd5;
+  border: 1px solid #e4e9e3;
+  border-radius: 18px 18px 0 0;
+  background: rgb(255 255 255 / 92%);
+  box-shadow: 0 10px 28px rgb(34 61 43 / 4%);
 }
 
 .marca {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  color: #286247;
-  font-size: 18px;
-  font-weight: 700;
+  color: #214f38;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
 }
 
 .logo {
-  width: 34px;
-  height: 34px;
+  width: 38px;
+  height: 38px;
   display: grid;
   place-items: center;
-  border-radius: 50%;
-  background: #d3e1d6;
+  border-radius: 13px;
+  background: #e8f2e9;
+  color: #287352;
 }
 
 .seccion {
-  color: #66706a;
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: #f0f5f0;
+  color: #57745f;
   font-size: 13px;
+  font-weight: 650;
 }
 
 .contenido {
-  max-width: 480px;
+  max-width: 720px;
   margin: 0 auto;
-  padding: 24px 16px 40px;
+  padding: 30px 32px 42px;
+  border: 1px solid #e4e9e3;
+  border-top: 0;
+  border-radius: 0 0 18px 18px;
+  background: #fff;
+  box-shadow: 0 18px 36px rgb(34 61 43 / 6%);
+}
+
+.contenido > div {
+  max-width: 570px;
+  margin: 0 auto;
+}
+
+.contenido > div > h1 {
+  margin: 0;
+  color: #1d3426;
+  font-size: clamp(26px, 5vw, 34px);
+  letter-spacing: -0.035em;
+}
+
+.contenido > div > h1 + p {
+  margin-top: 8px;
+  color: #66746a;
+  line-height: 1.6;
+}
+
+.contenido > div > h1 + p + p {
+  margin-top: 14px;
+  color: #417254;
+  font-size: 13px;
+}
+
+@media (max-width: 760px) {
+  .cabecera {
+    margin: 12px 14px 0;
+  }
+
+  .contenido {
+    margin: 0 14px;
+    padding: 25px 20px 32px;
+  }
+}
+
+@media (max-width: 420px) {
+  .cabecera {
+    min-height: 66px;
+    padding: 0 16px;
+  }
+
+  .seccion {
+    font-size: 11px;
+  }
+
+  .contenido {
+    padding: 21px 15px 27px;
+  }
 }

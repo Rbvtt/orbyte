@@ -16,7 +16,8 @@ from app.models import RescateEstado
 # nombres se insertan en el SQL; los valores siempre van como parámetros.
 COLUMNAS_PERMITIDAS = frozenset(
     {"organizacion_id", "voluntario_id", "asignado_por", "recibido_por", "cantidad_recibida",
-     "unidad_recibida", "es_medida", "personas_beneficiadas", "motivo_no_completado"}
+     "unidad_recibida", "es_medida", "personas_beneficiadas", "motivo_no_completado",
+     "comercio_id"}
 )
 MARCAS_DE_TIEMPO = frozenset({"asignado_en", "recogido_en", "entregado_en"})
 
@@ -31,6 +32,7 @@ def cambiar_estado(
     condiciones: dict | None = None,
     marca_tiempo: str | None = None,
     detalle: dict | None = None,
+    exigir_hora_futura: bool = False,
 ) -> bool:
     """Pasa el rescate de `desde` a `hacia` y deja exactamente una fila de historial.
 
@@ -53,6 +55,8 @@ def cambiar_estado(
     if marca_tiempo:
         sets.append(f"{marca_tiempo} = now()")
     where = ["id = :id", "estado = CAST(:desde AS rescate_estado)"]
+    if exigir_hora_futura:
+        where.append("hora_limite > now()")
     for c in sorted(condiciones):
         where.append(f"{c} IS NULL" if condiciones[c] is None else f"{c} = :cond_{c}")
 

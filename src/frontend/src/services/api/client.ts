@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Capa de datos: el único lugar que habla HTTP con el backend.
  * Los componentes nunca llaman a fetch directamente; pasan por los hooks de features/.
  */
@@ -7,7 +7,7 @@ import type { ErrorCampo } from "@/types/api";
 import { leerToken } from "./sesion";
 
 /** VITE_API_URL del .env de la raíz del repositorio (lo inyecta next.config.ts). */
-export const API_URL = (process.env.VITE_API_URL || "http://localhost:8000").replace(/\/$/, "");
+export const API_URL = (process.env.VITE_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/$/, "");
 
 export class ApiError extends Error {
   constructor(
@@ -55,7 +55,7 @@ export async function apiFetch<T>(ruta: string, opciones: Opciones = {}): Promis
   const finales: Record<string, string> = { Accept: "application/json", ...headers };
   if (body !== undefined) finales["Content-Type"] = "application/json";
   const token = leerToken();
-  if (token) finales.Authorization = `Bearer ${token}`;
+  if (token) finales.Authorization = "Bearer " + token;
 
   let respuesta: Response;
   try {
