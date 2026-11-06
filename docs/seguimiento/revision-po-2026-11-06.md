@@ -9,7 +9,7 @@ Esta revisión contrasta el tablero con el `main` observado en `60bca2d`. Actual
 | #58 — plan técnico | Se actualizó `docs/spec/plan-tecnico.md` con lo que está integrado y lo que falta en CMP-02/03/04/05. | Revisión de otra persona e integración por PR. |
 | #59 — estructura del tablero | Se contrastaron historias, tareas, sprints y estados visibles; se anotaron inconsistencias con `main`. | Auditar todos los issues contra los campos Sprint, Estimación, Criterio y Requerimiento. En la vista observada se ven prioridad y requerimiento en las tarjetas; no hay evidencia suficiente para certificar que Estimación y Criterio estén completos. |
 | #36 — datos iniciales | El fixture ficticio existente y el nuevo seed local cubren tres organizaciones, tres voluntarios, cuentas demo y quince rescates en los cinco estados. | PO debe confirmar con Marcela los datos reales si se usarán operativamente. QA debe cargar en PostgreSQL aislado, verificar catálogos y ejecutar CA-02.1 con evidencia. El script no se ha ejecutado aquí. |
-| #26 — dataset del demo | Se preparó `src/backend/scripts/seed_demo.py` para rescates e historial, con entregas en dos meses y ejecución repetible. | Ejecutar dos veces en base aislada, verificar conteos y relaciones, y adjuntar evidencia para dar por aceptado. |
+| #26 — dataset del demo | Se preparó `src/backend/scripts/seed_demo.py` para rescates e historial, con entregas en dos meses y ejecución repetible. Python reutiliza el hash Argon2 de la aplicación para las cuentas demo. | El issue menciona `seed_demo.sql`; PO/revisores deben confirmar si aceptan el script Python por seguridad de credenciales. Ejecutar dos veces en base aislada, verificar conteos y relaciones, y adjuntar evidencia para dar por aceptado. |
 
 ## CMP-02 — disponible para que QA pruebe
 
@@ -47,5 +47,5 @@ La vista mostraba 34 elementos en Backlog, 8 Por hacer, 3 En curso, 1 En revisi�
 
 - El alcance de la entrega académica aún debe cotejarse con la guía del curso. CMP-02/03 son la prioridad de este avance; CMP-04/05 no se declaran terminados.
 - No se contactó a Marcela ni a los integrantes del equipo desde sus cuentas.
-- No se ejecutaron el seed ni pruebas de aplicación. Este documento y el fixture dejan lista la preparación para QA, sin inventar evidencia.
+- La suite de backend ejecutó con `28 passed, 44 skipped`; los casos omitidos requieren `TEST_DATABASE_URL` con PostgreSQL. `py_compile` del seed y `git diff --check` pasan. No se ejecutó el seed: en este entorno no hay PostgreSQL local y Docker no tiene un daemon activo. Falta demostrar la carga en una base aislada, sin inventar evidencia.
 - El plan de base de datos del ADR 0001 sigue pendiente de decisión/ejecución por DevOps.
