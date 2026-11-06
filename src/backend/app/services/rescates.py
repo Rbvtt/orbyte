@@ -358,6 +358,41 @@ def cancelar_aviso_comercio(
         raise
 
 
+def marcar_no_completado(
+    db: Session, rescate_id: UUID, actor_id: UUID, motivo: str
+) -> Rescate | None:
+    """Cierra atómicamente un rescate disponible/asignado y registra motivo e historial.
+
+    Devuelve None cuando el rescate existe, pero ya no está en un estado que permita cerrarlo.
+    """
+    motivo = motivo.strip()
+    for estado in (RescateEstado.DISPONIBLE, RescateEstado.ASIGNADO):
+        try:
+            actualizado = cambiar_estado(
+                db,
+                rescate_id,
+                desde=estado,
+                hacia=RescateEstado.NO_COMPLETADO,
+                actor_id=actor_id,
+                cambios={"motivo_no_completado": motivo},
+                detalle={"motivo": motivo},
+            )
+            if actualizado:
+                db.commit()
+                rescate = db.get(Rescate, rescate_id)
+                if rescate is None:
+                    raise RuntimeError("El rescate cerrado no pudo recuperarse")
+                return rescate
+        except Exception:
+            db.rollback()
+            raise
+
+    db.rollback()
+    if db.scalar(select(Rescate.id).where(Rescate.id == rescate_id)) is None:
+        raise RescateNoEncontrado
+    return None
+
+
 def listar_rescates_activos(db: Session) -> list[dict]:
     organizacion = aliased(OrganizacionReceptora)
     voluntario = aliased(Usuario)
@@ -653,6 +688,7 @@ def obtener_detalle_rescate(
         "asignado_por": rescate.asignado_por,
         "observaciones": rescate.observaciones,
         "origen_aviso": origen_aviso.value,
+        "motivo_no_completado": rescate.motivo_no_completado,
     }
     if usuario.rol == UsuarioRol.ORGANIZACION.value:
         detalle["estado_visual"] = (

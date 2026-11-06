@@ -40,4 +40,10 @@ export const rescatesApi = {
   ) => apiFetch<RescateAvisoComercio>(`/api/v1/rescates/${id}`, { method: "PATCH", body: datos }),
   cancelarAviso: (id: string) =>
     apiFetch<RescateAvisoComercio>(`/api/v1/rescates/${id}/cancelar`, { method: "POST" }),
+  /** POST /api/v1/rescates/{id}/no-completado (#44). Solo fundación. */
+  noCompletado: (id: string, motivo: string) =>
+    apiFetch<{ id: string; estado: "no_completado"; motivo_no_completado: string }>(
+      `/api/v1/rescates/${id}/no-completado`,
+      { method: "POST", body: { motivo } },
+    ),
 };

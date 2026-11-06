@@ -120,6 +120,17 @@ class RescateReasignacionIn(BaseModel):
         return cleaned
 
 
+class RescateNoCompletadoIn(BaseModel):
+    motivo: str = Field(min_length=1, max_length=2000)
+
+    @field_validator("motivo", mode="before")
+    @classmethod
+    def normalize_motivo(cls, value: str) -> str:
+        if isinstance(value, str):
+            value = value.strip()
+        return value
+
+
 class RescateAsignacionOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -157,6 +168,14 @@ class RescateRecepcionIn(BaseModel):
         if es_medida is not None and (value == "kg") != es_medida:
             raise ValueError("La unidad debe coincidir con el tipo de cantidad")
         return value
+
+
+class RescateNoCompletadoOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    estado: RescateEstado
+    motivo_no_completado: str
 
 
 class OrganizacionOut(BaseModel):
@@ -214,3 +233,4 @@ class RescateDetalleOut(BaseModel):
     asignado_por: UUID | None = None
     observaciones: str | None = None
     origen_aviso: str | None = None
+    motivo_no_completado: str | None = None

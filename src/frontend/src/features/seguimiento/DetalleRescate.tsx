@@ -1,10 +1,13 @@
 "use client";
 
 import { useParams } from "next/navigation";
+import { useState } from "react";
 import { StatusPill } from "@/components/ui/StatusPill";
 import { referencia } from "@/features/rescates/referencia";
 import { dia, fechaCompleta, hora, hora24, restante } from "@/features/rescates/tiempo";
 import { useAhora } from "@/features/rescates/useAhora";
+import { rescatesApi } from "@/services/api/rescates";
+import { leerRolToken } from "@/services/api/sesion";
 import type { RescateDetalle, RescateHistorial } from "@/types/rescates";
 import styles from "./DetalleRescate.module.css";
 import { useDetalleRescate } from "./useDetalleRescate";
@@ -31,7 +34,7 @@ export function DetalleRescate() {
       </div>
     );
   } else {
-    contenido = <Contenido rescate={datos.rescate} historial={datos.historial} />;
+    contenido = <Contenido rescate={datos.rescate} historial={datos.historial} recargar={recargarYa} />;
   }
 
   return <main className={styles.pagina}>{contenido}</main>;
@@ -72,7 +75,36 @@ function ErrorDetalle({ status, mensaje, reintentar }: { status: number | null; 
   );
 }
 
-function Contenido({ rescate, historial }: { rescate: RescateDetalle; historial: RescateHistorial[] }) {
+function Contenido({
+  rescate,
+  historial,
+  recargar,
+}: {
+  rescate: RescateDetalle;
+  historial: RescateHistorial[];
+  recargar: () => void;
+}) {
+  const esFundacion = leerRolToken() === "fundacion";
+  const [motivo, setMotivo] = useState("");
+  const [confirmando, setConfirmando] = useState(false);
+  const [guardando, setGuardando] = useState(false);
+  const [errorAccion, setErrorAccion] = useState<string | null>(null);
+
+  async function cerrarNoCompletado() {
+    setGuardando(true);
+    setErrorAccion(null);
+    try {
+      await rescatesApi.noCompletado(rescate.id, motivo.trim());
+      setConfirmando(false);
+      setMotivo("");
+      recargar();
+    } catch (error) {
+      setErrorAccion((error as Error).message);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
   const ahora = useAhora();
   const activo = rescate.estado === "disponible" || rescate.estado === "asignado";
   const t = rescate.hora_limite ? restante(rescate.hora_limite, ahora) : null;
@@ -157,7 +189,59 @@ function Contenido({ rescate, historial }: { rescate: RescateDetalle; historial:
 
       {historial.length > 0 && <LineaTiempo historial={historial} />}
 
-      {/* Contenedor de acciones por rol y estado: aquí van la recogida (#45) y el cierre como no completado (#44). */}
+      {rescate.motivo_no_completado && (
+        <section className="panel" aria-labelledby="motivo-cierre-titulo">
+          <div className="panel__header">
+            <h2 id="motivo-cierre-titulo" className={styles.seccion}>Motivo de cierre</h2>
+          </div>
+          <p className={styles.motivo}>{rescate.motivo_no_completado}</p>
+        </section>
+      )}
+
+      {esFundacion && activo && (
+        <section className={`panel ${styles.cierre}`} aria-labelledby="cierre-titulo">
+          <div className="panel__header">
+            <h2 id="cierre-titulo" className={styles.seccion}>Cerrar rescate</h2>
+          </div>
+          <div className={styles.cierreContenido}>
+            <label className={styles.etiqueta} htmlFor="motivo-no-completado">Motivo por el que no se pudo completar</label>
+            <textarea
+              id="motivo-no-completado"
+              className="textarea"
+              maxLength={2000}
+              required
+              value={motivo}
+              onChange={(event) => setMotivo(event.target.value)}
+              aria-describedby="ayuda-motivo-no-completado"
+            />
+            <p id="ayuda-motivo-no-completado" className="meta">El motivo quedará guardado en el historial del rescate.</p>
+            {errorAccion && <p className={styles.errorAccion} role="alert">{errorAccion}</p>}
+            {confirmando ? (
+              <div className={styles.confirmacion} role="alertdialog" aria-labelledby="confirmar-cierre-titulo">
+                <p id="confirmar-cierre-titulo"><strong>¿Cerrar este rescate como no completado?</strong></p>
+                <p>Se guardará el motivo y el estado cambiará de forma permanente.</p>
+                <div className={styles.botonesCierre}>
+                  <button type="button" className="btn btn--danger" disabled={guardando} onClick={() => void cerrarNoCompletado()}>
+                    {guardando ? "Guardando…" : "Confirmar cierre"}
+                  </button>
+                  <button type="button" className="btn btn--secondary" disabled={guardando} onClick={() => setConfirmando(false)}>
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="btn btn--danger"
+                disabled={!motivo.trim() || guardando}
+                onClick={() => setConfirmando(true)}
+              >
+                Marcar como no completado
+              </button>
+            )}
+          </div>
+        </section>
+      )}
     </>
   );
 }

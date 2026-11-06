@@ -13,6 +13,8 @@ from app.schemas.rescates import (
     RescateDetalleOut,
     RescateHistorialOut,
     RescateListaOut,
+    RescateNoCompletadoIn,
+    RescateNoCompletadoOut,
     RescateOut,
     RescateReasignacionIn,
     RescateRecepcionIn,
@@ -34,6 +36,7 @@ from app.services.rescates import (
     listar_asignaciones_usuario,
     listar_historial_rescate,
     listar_rescates_activos,
+    marcar_no_completado,
     obtener_detalle_rescate,
 )
 
@@ -316,3 +319,32 @@ def reassign_rescate(
     db: Session = Depends(get_db),
 ) -> RescateAsignacionOut:
     return _guardar_asignacion(rescate_id, datos, current_user, db, solo_reasignar=True)
+
+
+@router.post(
+    "/{rescate_id}/no-completado",
+    response_model=RescateNoCompletadoOut,
+)
+def close_rescate_no_completado(
+    rescate_id: UUID,
+    datos: RescateNoCompletadoIn,
+    current_user: CurrentUser = Depends(require_role("fundacion")),
+    db: Session = Depends(get_db),
+) -> RescateNoCompletadoOut:
+    if current_user.usuario_id is None:
+        raise RuntimeError("El usuario autenticado no tiene un identificador")
+    try:
+        rescate = marcar_no_completado(
+            db, rescate_id, current_user.usuario_id, datos.motivo
+        )
+    except RescateNoEncontrado:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="El rescate no existe",
+        ) from None
+    if rescate is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Solo se pueden cerrar como no completados los rescates disponibles o asignados",
+        )
+    return RescateNoCompletadoOut.model_validate(rescate)
