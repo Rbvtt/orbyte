@@ -42,6 +42,8 @@ def asignacion_data(real_db):
         refrigeracion=True,
         horario_recepcion="08:00-17:00",
     )
+    real_db.add_all([comercio, organizacion])
+    real_db.flush()
     fundacion = _usuario(UsuarioRol.FUNDACION, "Fundacion de prueba")
     usuario_organizacion = _usuario(UsuarioRol.ORGANIZACION, "Usuario de organización")
     usuario_organizacion.organizacion_id = organizacion.id
@@ -54,8 +56,6 @@ def asignacion_data(real_db):
     ]
     real_db.add_all(
         [
-            comercio,
-            organizacion,
             fundacion,
             usuario_organizacion,
             voluntario,
@@ -135,6 +135,56 @@ def test_patch_asigna_y_registra_historial(api_client, asignacion_data):
     assert historial[0].estado_anterior == RescateEstado.DISPONIBLE
     assert historial[0].estado_nuevo == RescateEstado.ASIGNADO
     assert historial[0].cambiado_por == asignacion_data.fundacion.id
+
+
+def test_historial_devuelve_transiciones_actor_y_rol(api_client, asignacion_data):
+    response = api_client.patch(
+        f"/api/v1/rescates/{asignacion_data.rescate.id}/asignacion",
+        headers=_headers(asignacion_data.fundacion),
+        json=_payload(asignacion_data),
+    )
+    assert response.status_code == 200
+
+    historial = api_client.get(
+        f"/api/v1/rescates/{asignacion_data.rescate.id}/historial",
+        headers=_headers(asignacion_data.fundacion),
+    )
+
+    assert historial.status_code == 200
+    body = historial.json()
+    assert body == [
+        {
+            "id": body[0]["id"],
+            "estado_anterior": "disponible",
+            "estado_nuevo": "asignado",
+            "ocurrido_en": body[0]["ocurrido_en"],
+            "actor_id": str(asignacion_data.fundacion.id),
+            "actor_nombre": asignacion_data.fundacion.nombre,
+            "actor_rol": "fundacion",
+            "detalle": {},
+        }
+    ]
+
+
+@pytest.mark.parametrize("rol_index", [0, 1, 2])
+def test_historial_rechaza_roles_distintos_de_fundacion(
+    api_client, asignacion_data, rol_index
+):
+    response = api_client.get(
+        f"/api/v1/rescates/{asignacion_data.rescate.id}/historial",
+        headers=_headers(asignacion_data.roles[rol_index]),
+    )
+
+    assert response.status_code == 403
+
+
+def test_historial_inexistente_devuelve_404(api_client, asignacion_data):
+    response = api_client.get(
+        f"/api/v1/rescates/{uuid4()}/historial",
+        headers=_headers(asignacion_data.fundacion),
+    )
+
+    assert response.status_code == 404
 
 
 def test_patch_rechaza_rescate_vencido(api_client, asignacion_data):

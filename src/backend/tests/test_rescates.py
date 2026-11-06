@@ -58,7 +58,7 @@ def valid_payload():
         "alimento": "Pan",
         "cantidad_aprox": "20 unidades",
         "lugar_recogida": "Calle 1",
-        "hora_limite": "2026-10-28T18:00:00-05:00",
+        "hora_limite": (datetime.now(timezone.utc) + timedelta(days=1)).isoformat(),
     }
 
 

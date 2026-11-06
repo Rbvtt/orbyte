@@ -6,6 +6,8 @@ from pathlib import Path
 os.environ["DATABASE_URL"] = "postgresql://test:test@localhost:5432/test"
 os.environ["JWT_SECRET"] = "test-secret-that-is-long-enough-for-tests"
 os.environ["JWT_EXPIRES_MIN"] = "60"
+if os.getenv("TEST_DATABASE_URL"):
+    os.environ["DATABASE_URL"] = os.environ["TEST_DATABASE_URL"]
 
 from app.config import get_settings
 
