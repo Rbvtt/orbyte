@@ -34,4 +34,6 @@ export interface RescateDetalle {
   asignado_en?: string | null;
   asignado_por?: string;
   observaciones?: string;
+  /** Solo se entrega a fundación cuando el rescate quedó como no completado. */
+  motivo_no_completado?: string;
 }

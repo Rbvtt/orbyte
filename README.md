@@ -166,6 +166,14 @@ traslado: `lugar_recogida`, `hora_limite`, `cantidad_aprox` y
 campos devueltos se filtran según el rol y nunca incluyen credenciales,
 tokens ni hashes.
 
+`POST /api/v1/rescates/{id}/no-completado` permite únicamente a `fundacion`
+cerrar un rescate en estado `disponible` o `asignado`. Recibe un body
+`{"motivo":"..."}` con texto obligatorio (máximo 2000 caracteres); el cambio
+de estado, `motivo_no_completado` y el detalle del historial se escriben en la
+misma transacción. Devuelve `409` si el rescate ya está recogido o entregado y
+`404` si no existe. El detalle incluye el motivo solo para la fundación. En la
+pantalla de detalle, la fundación confirma la acción antes de enviarla.
+
 ### Matriz de permisos propuesta
 
 Los endpoints de negocio aún corresponden a otros issues; donde el plan técnico no determina permisos concretos se marca **Por definir**.
@@ -181,7 +189,7 @@ Los endpoints de negocio aún corresponden a otros issues; donde el plan técnic
 | `POST /rescates/{id}/entrega` (#17) | Por definir |
 | `GET /rescates` y `GET /rescates/{id}` (#37) | Por definir |
 | `GET /rescates/{id}/historial` (#43) | Por definir |
-| `POST /rescates/{id}/no-completado` (#44) | Por definir |
+| `POST /rescates/{id}/no-completado` (#44) | `fundacion`; estados `disponible` o `asignado`, motivo obligatorio |
 | `GET /impacto` (#51) | Por definir |
 
 Los datos de personas beneficiadas corresponden únicamente a `fundacion` y a la `organizacion` destino (RNF-005). Los endpoints que los expongan usarán `ROLES_VE_BENEFICIARIOS`.

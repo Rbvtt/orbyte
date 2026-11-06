@@ -56,6 +56,17 @@ class RescateAsignacionIn(BaseModel):
     voluntario_id: UUID
 
 
+class RescateNoCompletadoIn(BaseModel):
+    motivo: str = Field(min_length=1, max_length=2000)
+
+    @field_validator("motivo", mode="before")
+    @classmethod
+    def normalize_motivo(cls, value: str) -> str:
+        if isinstance(value, str):
+            value = value.strip()
+        return value
+
+
 class RescateAsignacionOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -65,6 +76,14 @@ class RescateAsignacionOut(BaseModel):
     voluntario_id: UUID
     asignado_en: datetime
     asignado_por: UUID
+
+
+class RescateNoCompletadoOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    estado: RescateEstado
+    motivo_no_completado: str
 
 
 class OrganizacionOut(BaseModel):
@@ -111,3 +130,4 @@ class RescateDetalleOut(BaseModel):
     asignado_en: datetime | None
     asignado_por: UUID | None = None
     observaciones: str | None = None
+    motivo_no_completado: str | None = None
