@@ -195,29 +195,47 @@ def asignar_rescate_con_historial(
                 raise ValueError("El motivo es obligatorio para la reasignación")
             if anterior_voluntario_id == voluntario_id:
                 return rescate
-            rescate.voluntario_id = voluntario_id
-            rescate.organizacion_id = organizacion_id
-            rescate.asignado_en = datetime.now(timezone.utc)
-            rescate.asignado_por = asignado_por
-            db.add(
-                RescateHistorial(
-                    rescate_id=rescate_id,
-                    estado_anterior=RescateEstado.ASIGNADO,
-                    estado_nuevo=RescateEstado.ASIGNADO,
-                    cambiado_por=asignado_por,
-                    detalle={
-                        "voluntario_anterior": str(anterior_voluntario_id),
-                        "voluntario_nuevo": str(voluntario_id),
-                        "motivo": motivo.strip(),
-                        "reasignado_por": str(asignado_por),
-                    },
-                )
-            )
+            # #35: la reasignación también pasa por el servicio único de transición.
+            if not cambiar_estado(
+                db,
+                rescate_id,
+                RescateEstado.ASIGNADO,
+                RescateEstado.ASIGNADO,
+                asignado_por,
+                cambios={
+                    "voluntario_id": voluntario_id,
+                    "organizacion_id": organizacion_id,
+                    "asignado_por": asignado_por,
+                },
+                condiciones={"voluntario_id": anterior_voluntario_id},
+                marca_tiempo="asignado_en",
+                detalle={
+                    "voluntario_anterior": str(anterior_voluntario_id),
+                    "voluntario_nuevo": str(voluntario_id),
+                    "motivo": motivo.strip(),
+                    "reasignado_por": str(asignado_por),
+                },
+                exigir_hora_futura=True,
+            ):
+                raise ConflictoAsignacion(None)
             db.commit()
             return db.get(Rescate, rescate_id)
 
-        if not _ejecutar_asignacion(
-            db, rescate_id, voluntario_id, organizacion_id, asignado_por
+        # #35: UPDATE condicional (compare-and-set de #11) + fila de historial en la misma transacción.
+        if not cambiar_estado(
+            db,
+            rescate_id,
+            RescateEstado.DISPONIBLE,
+            RescateEstado.ASIGNADO,
+            asignado_por,
+            cambios={
+                "voluntario_id": voluntario_id,
+                "organizacion_id": organizacion_id,
+                "asignado_por": asignado_por,
+            },
+            condiciones={"voluntario_id": None},
+            marca_tiempo="asignado_en",
+            exigir_hora_futura=True,
         ):
             actual = db.execute(
                 select(Rescate, Usuario.nombre)
@@ -226,14 +244,6 @@ def asignar_rescate_con_historial(
             ).one()
             raise ConflictoAsignacion(actual.nombre)
 
-        db.add(
-            RescateHistorial(
-                rescate_id=rescate_id,
-                estado_anterior=RescateEstado.DISPONIBLE,
-                estado_nuevo=RescateEstado.ASIGNADO,
-                cambiado_por=asignado_por,
-            )
-        )
         db.commit()
         rescate = db.get(Rescate, rescate_id)
         if rescate is None:
