@@ -133,6 +133,16 @@ class RescateNoCompletadoOut(RescateOut):
     motivo_no_completado: str
 
 
+class RescateRecogidaOut(BaseModel):
+    """#16 · Respuesta de POST /rescates/{id}/recogida (CA-04.1)."""
+
+    id: UUID
+    estado: RescateEstado
+    voluntario_id: UUID
+    voluntario: str
+    recogido_en: datetime
+
+
 class RescateHistorialOut(BaseModel):
     id: int
     estado_anterior: RescateEstado | None
