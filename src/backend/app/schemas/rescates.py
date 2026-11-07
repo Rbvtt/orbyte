@@ -104,22 +104,6 @@ class RescateAsignacionIn(BaseModel):
     motivo: str | None = None
 
 
-class RescateReasignacionIn(BaseModel):
-    organizacion_id: UUID
-    voluntario_id: UUID
-    motivo: str = Field(min_length=1)
-
-    @field_validator("motivo", mode="before")
-    @classmethod
-    def normalize_motivo(cls, value: str) -> str:
-        if not isinstance(value, str):
-            return value
-        cleaned = value.strip()
-        if not cleaned:
-            raise ValueError("El motivo es obligatorio para la reasignación")
-        return cleaned
-
-
 class RescateAsignacionOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -129,6 +113,24 @@ class RescateAsignacionOut(BaseModel):
     voluntario_id: UUID
     asignado_en: datetime
     asignado_por: UUID
+
+
+class RescateNoCompletadoIn(BaseModel):
+    motivo: str = Field(min_length=1)
+
+    @field_validator("motivo", mode="before")
+    @classmethod
+    def normalize_motivo(cls, value: str) -> str:
+        if not isinstance(value, str):
+            return value
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("El motivo es obligatorio")
+        return cleaned
+
+
+class RescateNoCompletadoOut(RescateOut):
+    motivo_no_completado: str
 
 
 class RescateHistorialOut(BaseModel):
