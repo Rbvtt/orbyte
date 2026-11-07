@@ -8,6 +8,7 @@ import { useAhora } from "@/features/rescates/useAhora";
 import type { RescateDetalle, RescateHistorial } from "@/types/rescates";
 import styles from "./DetalleRescate.module.css";
 import { useDetalleRescate } from "./useDetalleRescate";
+import { AccionRecogida } from "./AccionRecogida";
 
 /**
  * Detalle del rescate (#12 · CA-02.3, RF-010, RNF-005): consume GET /api/v1/rescates/{id} (#37).
@@ -34,7 +35,13 @@ export function DetalleRescate() {
     contenido = <Contenido rescate={datos.rescate} historial={datos.historial} />;
   }
 
-  return <main className={styles.pagina}>{contenido}</main>;
+  return (
+    <main className={styles.pagina}>
+      {contenido}
+      {/* #45 · Registrar recogida (solo el voluntario asignado, con el rescate asignado). */}
+      {datos && !error && <AccionRecogida rescate={datos.rescate} onRegistrada={recargarYa} />}
+    </main>
+  );
 }
 
 /**

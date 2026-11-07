@@ -273,3 +273,8 @@
     gap: 3px;
   }
 }
+
+/* #45 · «Registrar recogida» es un enlace al detalle con el mismo aspecto del botón. */
+a.accion {
+  text-decoration: none;
+}
