@@ -15,8 +15,8 @@ El código de la aplicación vive en `src/`: el backend (FastAPI) en `src/backen
 
 1. Copia `.env.example` como `.env` en la raíz del repositorio y completa `DATABASE_URL` y `JWT_SECRET`.
 2. El archivo `.env` está en `.gitignore` y nunca se sube al repositorio.
-3. En producción las variables se configuran solo en los paneles de Render (backend: `DATABASE_URL`, `JWT_SECRET`, `JWT_EXPIRES_MIN`, `CORS_ORIGINS`, `DEFAULT_ADMIN_EMAIL`, `DEFAULT_ADMIN_PASSWORD`) y Vercel (frontend: `VITE_API_URL`).
-4. Al arrancar el backend, si no existe, crea automáticamente un administrador inicial con el correo `marcela@gmail.com` y la contraseña por defecto `Admin123*` para desarrollo. En producción se recomienda cambiarlo desde variables de entorno y luego redefinir la contraseña desde el panel de administración.
+3. En producción las variables se configuran solo en los paneles de Render (backend, ver [Despliegue del backend](#despliegue-del-backend-en-render)) y Vercel (frontend: `VITE_API_URL`).
+4. Al arrancar el backend, si no existe, crea automáticamente un administrador inicial con el correo `marcela@gmail.com` y la contraseña por defecto `Admin123*` para desarrollo. Con `ENTORNO=produccion` esa contraseña se rechaza y el administrador no se crea hasta definir un `DEFAULT_ADMIN_PASSWORD` propio.
 
 ### Backend
 
@@ -54,6 +54,26 @@ sesión de nuevo. La aplicación obtiene el comercio asociado desde
 Los usuarios de fundación seleccionan el comercio desde `GET /api/v1/comercios`;
 los usuarios comercio solo pueden registrar avisos para el comercio asociado a
 su cuenta.
+
+## Despliegue del backend en Render
+
+`render.yaml` define la API (`orbyte-api`) y la base PostgreSQL (`orbyte-db`), ambas en el plan gratuito y en la región `virginia`. Cada cambio en `src/backend` que llega a `main` despliega la API.
+
+Para crearlo: en el panel de Render, **New → Blueprint**, elige este repositorio y completa las variables que pide:
+
+| Variable | Valor |
+|---|---|
+| `CORS_ORIGINS` | Dominio de Vercel, con `https://` y sin `/` final. Se puede completar después de desplegar el frontend. |
+| `DEFAULT_ADMIN_EMAIL` | Correo de la administradora inicial. |
+| `DEFAULT_ADMIN_PASSWORD` | Contraseña propia y larga. Con `Admin123*` o vacía, la administradora no se crea. |
+
+`JWT_SECRET` lo genera Render y `DATABASE_URL` sale de la base. Las migraciones corren al arrancar: si fallan, el despliegue falla. Para verificar, abre `https://<servicio>.onrender.com/health`, que debe responder `{"status":"ok"}`.
+
+Limitaciones del plan gratuito:
+
+- La API se apaga tras 15 minutos sin tráfico y tarda cerca de un minuto en volver (#57).
+- La base vence a los 30 días de creada, con 14 días de gracia, y no tiene respaldos (ver [ADR 0001](docs/decisiones/0001-plan-base-de-datos-render.md) y #56).
+- La base no acepta conexiones externas (`ipAllowList: []`). Para conectarse desde afuera, hay que agregar la IP en `render.yaml`.
 
 ## Autenticación y permisos
 
