@@ -237,9 +237,13 @@ def test_no_completado_exige_motivo_y_estado_elegible(api_client, asignacion_dat
     )
     assert falta_motivo.status_code == 422
 
-    asignacion_data.rescate.estado = RescateEstado.ENTREGADO
+    # El estado va al final: leer un .id puede disparar un autoflush, y un rescate
+    # entregado sin voluntario ni datos de recepción viola las restricciones de la BD.
     asignacion_data.rescate.organizacion_id = asignacion_data.organizacion.id
     asignacion_data.rescate.voluntario_id = asignacion_data.voluntario.id
+    asignacion_data.rescate.recibido_por = asignacion_data.fundacion.id
+    asignacion_data.rescate.cantidad_recibida = 10
+    asignacion_data.rescate.estado = RescateEstado.ENTREGADO
     asignacion_data.db.commit()
     no_elegible = api_client.post(
         f"/api/v1/rescates/{asignacion_data.rescate.id}/no-completado",
@@ -322,7 +326,8 @@ def test_reasignacion_no_esta_habilitada(api_client, asignacion_data):
         },
     )
 
-    assert response.status_code == 405
+    # La ruta no existe, así que la API responde 404 (405 sería una ruta con otro método).
+    assert response.status_code == 404
 
 
 def test_detalle_entrega_datos_de_traslado_al_voluntario(api_client, asignacion_data):
