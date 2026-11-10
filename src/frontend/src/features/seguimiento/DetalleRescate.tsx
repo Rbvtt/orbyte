@@ -94,7 +94,7 @@ function Contenido({
     setGuardando(true);
     setErrorAccion(null);
     try {
-      await rescatesApi.noCompletado(rescate.id, motivo.trim());
+      await rescatesApi.marcarNoCompletado(rescate.id, motivo.trim());
       setConfirmando(false);
       setMotivo("");
       recargar();

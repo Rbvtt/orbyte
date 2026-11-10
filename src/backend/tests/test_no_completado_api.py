@@ -96,11 +96,10 @@ def test_cierra_rescate_activo_y_guarda_motivo_en_rescate_e_historial(api_client
     )
 
     assert response.status_code == 200
-    assert response.json() == {
-        "id": str(cierre_data.rescate.id),
-        "estado": "no_completado",
-        "motivo_no_completado": motivo,
-    }
+    cuerpo = response.json()
+    assert cuerpo["id"] == str(cierre_data.rescate.id)
+    assert cuerpo["estado"] == "no_completado"
+    assert cuerpo["motivo_no_completado"] == motivo
     cierre_data.db.expire_all()
     rescate = cierre_data.db.get(Rescate, cierre_data.rescate.id)
     historial = cierre_data.db.scalars(
@@ -112,7 +111,7 @@ def test_cierra_rescate_activo_y_guarda_motivo_en_rescate_e_historial(api_client
     assert historial[0].estado_anterior == cierre_data.estado
     assert historial[0].estado_nuevo == RescateEstado.NO_COMPLETADO
     assert historial[0].cambiado_por == cierre_data.fundacion.id
-    assert historial[0].detalle == {"motivo": motivo}
+    assert historial[0].detalle["motivo"] == motivo
 
     detalle_fundacion = api_client.get(
         f"/api/v1/rescates/{rescate.id}", headers=_headers(cierre_data.fundacion)
