@@ -3,6 +3,7 @@ import type {
   RescateDetalle,
   RescateHistorial,
   RescateLista,
+  RescateRecogida,
 } from "@/types/rescates";
 import { apiFetch } from "./client";
 
@@ -12,6 +13,9 @@ export const rescatesApi = {
   /** Rescates activos asignados al voluntario autenticado o a su organización. */
   misAsignaciones: (signal?: AbortSignal) =>
     apiFetch<RescateLista[]>("/api/v1/rescates/mis-asignaciones", { signal }),
+  /** POST /api/v1/rescates/{id}/recogida (#16 · CA-04.1). Solo el voluntario asignado; asignado → recogido. */
+  registrarRecogida: (id: string) =>
+    apiFetch<RescateRecogida>(`/api/v1/rescates/${id}/recogida`, { method: "POST" }),
   marcarEntregado: (id: string) =>
     apiFetch<void>(`/api/v1/rescates/${id}/entrega-voluntario`, { method: "POST" }),
   confirmarRecepcion: (

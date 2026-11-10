@@ -182,7 +182,13 @@ export function MisRescates() {
                     </>
                   )}
                 </dl>
+                {/* #45: primero se registra la recogida (en el detalle) y después se marca la entrega. */}
                 {rol === "voluntario" && rescate.estado === "asignado" && (
+                  <Link className={styles.accion} href={`/rescates/${rescate.id}`}>
+                    Registrar recogida
+                  </Link>
+                )}
+                {rol === "voluntario" && rescate.estado_visual === "recogido" && (
                   <button className={styles.accion} type="button" disabled={accion === rescate.id} onClick={() => void marcarEntregado(rescate.id)}>
                     {accion === rescate.id ? "Guardando…" : "Marcar donación entregada"}
                   </button>
