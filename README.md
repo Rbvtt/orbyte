@@ -79,7 +79,9 @@ La API desplegada está en `https://orbyte-api-ecow.onrender.com` (documentació
 
 ## Despliegue del frontend en Vercel
 
-En el panel de Vercel, **Add New → Project**, importa este repositorio y configura:
+El frontend desplegado está en `https://orbyte-dun.vercel.app`. El proyecto de Vercel está en la cuenta de Rbvtt, dueño del repositorio: Vercel no deja que otra cuenta personal lo enlace, aunque tenga permiso de escritura. Cambiar variables, ver los logs o redesplegar se hace desde esa cuenta.
+
+Para crearlo de nuevo: en el panel de Vercel, **Add New → Project**, importa este repositorio y configura:
 
 | Campo | Valor |
 |---|---|
@@ -91,7 +93,7 @@ En el panel de Vercel, **Add New → Project**, importa este repositorio y confi
 
 No hace falta un rewrite: Next.js sirve las rutas profundas como `/rescates/123` por sí mismo.
 
-Después del primer despliegue, copia el dominio de producción de Vercel en `CORS_ORIGINS` en Render. Los despliegues de vista previa usan otros dominios: CORS los rechaza y no pueden iniciar sesión contra la API desplegada.
+Después del primer despliegue, copia el dominio de producción de Vercel en `CORS_ORIGINS` en Render (hoy `https://orbyte-dun.vercel.app`). Si se dejó vacía al crear el Blueprint, Render no la guarda: hay que agregarla en **orbyte-api → Environment** y redesplegar. Los despliegues de vista previa usan otros dominios: CORS los rechaza y no pueden iniciar sesión contra la API desplegada.
 
 ## Autenticación y permisos
 
