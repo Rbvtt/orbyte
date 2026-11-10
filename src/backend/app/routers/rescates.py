@@ -13,8 +13,9 @@ from app.schemas.rescates import (
     RescateDetalleOut,
     RescateHistorialOut,
     RescateListaOut,
+    RescateNoCompletadoIn,
+    RescateNoCompletadoOut,
     RescateOut,
-    RescateReasignacionIn,
     RescateRecepcionIn,
     RescateUpdate,
 )
@@ -34,6 +35,7 @@ from app.services.rescates import (
     listar_asignaciones_usuario,
     listar_historial_rescate,
     listar_rescates_activos,
+    marcar_rescate_no_completado,
     obtener_detalle_rescate,
 )
 
@@ -238,13 +240,37 @@ def cancel_comercio_aviso(
     return RescateComercioOut.model_validate(rescate)
 
 
+@router.post(
+    "/{rescate_id}/no-completado",
+    response_model=RescateNoCompletadoOut,
+)
+def post_no_completado(
+    rescate_id: UUID,
+    datos: RescateNoCompletadoIn,
+    current_user: CurrentUser = Depends(require_role("fundacion")),
+    db: Session = Depends(get_db),
+) -> RescateNoCompletadoOut:
+    if current_user.usuario_id is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="No autorizado")
+    try:
+        rescate = marcar_rescate_no_completado(
+            db, rescate_id, current_user.usuario_id, datos.motivo
+        )
+    except RescateNoEncontrado:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="El rescate no existe") from None
+    except ConflictoEstadoRescate:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Solo se pueden marcar como no completados rescates disponibles o asignados",
+        ) from None
+    return RescateNoCompletadoOut.model_validate(rescate)
+
+
 def _guardar_asignacion(
     rescate_id: UUID,
-    datos: RescateAsignacionIn | RescateReasignacionIn,
+    datos: RescateAsignacionIn,
     current_user: CurrentUser,
     db: Session,
-    *,
-    solo_reasignar: bool,
 ) -> RescateAsignacionOut:
     if current_user.usuario_id is None:
         raise RuntimeError("El usuario autenticado no tiene un identificador")
@@ -255,8 +281,6 @@ def _guardar_asignacion(
             datos.voluntario_id,
             datos.organizacion_id,
             current_user.usuario_id,
-            datos.motivo,
-            solo_reasignar=solo_reasignar,
         )
     except RescateNoEncontrado:
         raise HTTPException(
@@ -274,9 +298,7 @@ def _guardar_asignacion(
         ) from None
     except ConflictoAsignacion as exc:
         detail = (
-            "El rescate ya no está disponible para reasignación"
-            if solo_reasignar and exc.voluntario_nombre is None
-            else "El rescate ya no está disponible para asignación"
+            "El rescate ya no está disponible para asignación"
             if exc.voluntario_nombre is None
             else f"El rescate ya está asignado al voluntario {exc.voluntario_nombre}"
         )
@@ -302,17 +324,4 @@ def assign_rescate(
     current_user: CurrentUser = Depends(require_role("fundacion")),
     db: Session = Depends(get_db),
 ) -> RescateAsignacionOut:
-    return _guardar_asignacion(rescate_id, datos, current_user, db, solo_reasignar=False)
-
-
-@router.patch(
-    "/{rescate_id}/reasignacion",
-    response_model=RescateAsignacionOut,
-)
-def reassign_rescate(
-    rescate_id: UUID,
-    datos: RescateReasignacionIn,
-    current_user: CurrentUser = Depends(require_role("fundacion")),
-    db: Session = Depends(get_db),
-) -> RescateAsignacionOut:
-    return _guardar_asignacion(rescate_id, datos, current_user, db, solo_reasignar=True)
+    return _guardar_asignacion(rescate_id, datos, current_user, db)

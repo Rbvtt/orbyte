@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { IconoBuscar, IconoCalendario, IconoChevron, IconoInfo } from "@/components/ui/Iconos";
 import { StatusPill } from "@/components/ui/StatusPill";
 import { sesionApi } from "@/services/api/sesionApi";
+import { rescatesApi } from "@/services/api/rescates";
 import {
   agrupar,
   contar,
@@ -144,7 +145,7 @@ export function RescatesActivos() {
             {todos.length === 0 ? "No hay rescates activos. Cuando un comercio avise, aparecerá aquí." : "Ningún rescate coincide con la búsqueda."}
           </p>
         ) : (
-          <Tabla grupos={grupos} ahora={ahora} />
+          <Tabla grupos={grupos} ahora={ahora} actualizar={actualizar} />
         )}
 
         {rescates && (
@@ -165,7 +166,7 @@ export function RescatesActivos() {
   );
 }
 
-function Tabla({ grupos, ahora }: { grupos: Grupo[]; ahora: Date }) {
+function Tabla({ grupos, ahora, actualizar }: { grupos: Grupo[]; ahora: Date; actualizar: () => void }) {
   const [cerrados, setCerrados] = useState<Set<EstadoVisible>>(new Set());
   const alternar = (e: EstadoVisible) =>
     setCerrados((c) => {
@@ -205,7 +206,7 @@ function Tabla({ grupos, ahora }: { grupos: Grupo[]; ahora: Date }) {
                   </button>
                 </th>
               </tr>
-              {abierto && g.rescates.map((r) => <Fila key={r.id} r={r} ahora={ahora} />)}
+              {abierto && g.rescates.map((r) => <Fila key={r.id} r={r} ahora={ahora} actualizar={actualizar} />)}
             </tbody>
           );
         })}
@@ -214,11 +215,24 @@ function Tabla({ grupos, ahora }: { grupos: Grupo[]; ahora: Date }) {
   );
 }
 
-function Fila({ r, ahora }: { r: FilaRescate; ahora: Date }) {
+function Fila({ r, ahora, actualizar }: { r: FilaRescate; ahora: Date; actualizar: () => void }) {
+  const [marcandoNoCompletado, setMarcandoNoCompletado] = useState(false);
   const limite = detalleHora(r, ahora);
   const estado = estadoVisible(r, ahora);
   const puedeAsignar = estado === "disponible" && r.pendiente_asignar;
-  const puedeReasignar = estado === "asignado" && new Date(r.hora_limite) > ahora;
+  const marcarNoCompletado = async () => {
+    const motivo = window.prompt("Indica el motivo por el que este rescate no pudo realizarse:");
+    if (!motivo?.trim()) return;
+    setMarcandoNoCompletado(true);
+    try {
+      await rescatesApi.marcarNoCompletado(r.id, motivo.trim());
+      actualizar();
+    } catch (error) {
+      window.alert(`No se pudo marcar el rescate como no completado. ${(error as Error).message}`);
+    } finally {
+      setMarcandoNoCompletado(false);
+    }
+  };
   return (
     <tr className={puedeAsignar ? styles.pendiente : undefined}>
       <td className={styles.alimento}>
@@ -260,9 +274,9 @@ function Fila({ r, ahora }: { r: FilaRescate; ahora: Date }) {
         <StatusPill estado={estado} />
       </td>
       <td className={styles.acciones}>
-        {puedeAsignar || puedeReasignar ? (
+        {puedeAsignar ? (
           <Link href={`/fundacion/rescates/${r.id}/asignar`} className="btn btn--primary btn--compact">
-            {puedeReasignar ? "Reasignar" : "Asignar"}
+            Asignar
           </Link>
         ) : estado !== "no_disponible" ? (
           <button type="button" className="btn btn--secondary btn--compact" disabled>
@@ -272,6 +286,16 @@ function Fila({ r, ahora }: { r: FilaRescate; ahora: Date }) {
         <Link href={`/rescates/${r.id}`} className="btn btn--secondary btn--compact">
           Ver detalle
         </Link>
+        {puedeAsignar && (
+          <button
+            type="button"
+            className="btn btn--ghost btn--compact"
+            onClick={() => void marcarNoCompletado()}
+            disabled={marcandoNoCompletado}
+          >
+            {marcandoNoCompletado ? "Guardando…" : "No completado"}
+          </button>
+        )}
       </td>
     </tr>
   );
