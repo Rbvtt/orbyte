@@ -280,6 +280,18 @@ falla. El servicio para las transiciones de estado es `cambiar_estado()` de
 `app/services/transiciones.py`: hace el `UPDATE` condicional y la fila del
 historial en la misma transacción.
 
+La migración `0006` hace que `rescates.unidad_recibida` acepte `kg` o `aproximada`, los
+mismos valores que envía la API. Antes la base esperaba `aprox` y la recepción con cantidad
+estimada fallaba. La `0007` crea el índice `(estado, entregado_en)` de la consulta de impacto.
+
+La consulta de impacto de CMP-05 (#20) está en `app/services/impacto.py`.
+`calcular_impacto(db, desde, hasta)` devuelve los kilogramos medidos, las personas
+beneficiadas y las organizaciones distintas de los rescates `entregado` con
+`desde <= entregado_en < hasta`. Si no hubo entregas, todo vale 0. También devuelve los
+kilogramos y rescates estimados para el aviso del diseño, sin sumarlos a los kilogramos.
+`rango_de_fechas(desde, hasta)` convierte días de calendario de Colombia, ambos incluidos,
+en ese intervalo.
+
 Para crear una migración nueva: `alembic revision -m "descripcion"`. Se escribe a mano con `op.execute()` y siempre se completan `upgrade()` y `downgrade()`.
 
 ### Usuarios de desarrollo
