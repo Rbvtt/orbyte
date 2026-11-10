@@ -259,7 +259,7 @@ La migración `0004` deja ese historial con la forma de #35: `historial_estados`
 falla. El servicio para las transiciones de estado es `cambiar_estado()` de
 `app/services/transiciones.py`: hace el `UPDATE` condicional y la fila del
 historial en la misma transacción. La usan todas las transiciones (asignación,
-reasignación, cancelación, entrega y recepción). Las pruebas de estos criterios están
+cancelación, no completado, entrega y recepción). Las pruebas de estos criterios están
 en `tests/test_historial_estados.py`.
 
 Para crear una migración nueva: `alembic revision -m "descripcion"`. Se escribe a mano con `op.execute()` y siempre se completan `upgrade()` y `downgrade()`.
