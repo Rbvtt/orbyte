@@ -322,7 +322,13 @@ def test_reasignacion_no_esta_habilitada(api_client, asignacion_data):
         },
     )
 
-    assert response.status_code == 405
+    # CA-02.2: la ruta de reasignación ya no existe, así que la API responde 404 (no 405: no hay
+    # ninguna ruta con esa dirección para otro método) y el rescate no cambia.
+    assert response.status_code == 404
+    asignacion_data.db.expire_all()
+    rescate = asignacion_data.db.get(Rescate, asignacion_data.rescate.id)
+    assert rescate.estado == RescateEstado.DISPONIBLE
+    assert rescate.voluntario_id is None
 
 
 def test_detalle_entrega_datos_de_traslado_al_voluntario(api_client, asignacion_data):
