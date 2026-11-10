@@ -237,9 +237,14 @@ def test_no_completado_exige_motivo_y_estado_elegible(api_client, asignacion_dat
     )
     assert falta_motivo.status_code == 422
 
-    asignacion_data.rescate.estado = RescateEstado.ENTREGADO
-    asignacion_data.rescate.organizacion_id = asignacion_data.organizacion.id
-    asignacion_data.rescate.voluntario_id = asignacion_data.voluntario.id
+    # Se marca `entregado` con los datos que exigen las restricciones de la tabla
+    # (voluntario y recepción). Sin autoflush: si no, guardaría el estado a medio armar.
+    with asignacion_data.db.no_autoflush:
+        asignacion_data.rescate.estado = RescateEstado.ENTREGADO
+        asignacion_data.rescate.organizacion_id = asignacion_data.organizacion.id
+        asignacion_data.rescate.voluntario_id = asignacion_data.voluntario.id
+        asignacion_data.rescate.recibido_por = asignacion_data.fundacion.id
+        asignacion_data.rescate.cantidad_recibida = 20
     asignacion_data.db.commit()
     no_elegible = api_client.post(
         f"/api/v1/rescates/{asignacion_data.rescate.id}/no-completado",

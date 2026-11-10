@@ -116,7 +116,7 @@ class RescateAsignacionOut(BaseModel):
 
 
 class RescateNoCompletadoIn(BaseModel):
-    motivo: str = Field(min_length=1)
+    motivo: str = Field(min_length=1, max_length=2000)
 
     @field_validator("motivo", mode="before")
     @classmethod
@@ -216,3 +216,4 @@ class RescateDetalleOut(BaseModel):
     asignado_por: UUID | None = None
     observaciones: str | None = None
     origen_aviso: str | None = None
+    motivo_no_completado: str | None = None

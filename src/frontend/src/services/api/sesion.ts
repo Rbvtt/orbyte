@@ -61,3 +61,19 @@ export function suscribirSesion(cambio: () => void): () => void {
 export function leerComercioId(): string | null {
   return leer(CLAVE_COMERCIO);
 }
+
+/** Rol para presentar acciones en la interfaz; la API vuelve a validar permisos en cada petición. */
+export function leerRolToken(): string | null {
+  const token = leerToken();
+  if (!token) return null;
+  try {
+    const segmento = token.split(".")[1];
+    if (!segmento) return null;
+    const base64 = segmento.replace(/-/g, "+").replace(/_/g, "/");
+    const completo = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+    const payload = JSON.parse(window.atob(completo)) as { rol?: unknown };
+    return typeof payload.rol === "string" ? payload.rol : null;
+  } catch {
+    return null;
+  }
+}

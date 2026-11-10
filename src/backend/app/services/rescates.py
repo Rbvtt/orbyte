@@ -656,6 +656,7 @@ def obtener_detalle_rescate(
         "asignado_por": rescate.asignado_por,
         "observaciones": rescate.observaciones,
         "origen_aviso": origen_aviso.value,
+        "motivo_no_completado": rescate.motivo_no_completado,
     }
     if usuario.rol == UsuarioRol.ORGANIZACION.value:
         detalle["estado_visual"] = (
