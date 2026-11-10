@@ -163,3 +163,120 @@
   color: #68746b;
   text-align: center;
 }
+
+/* #39 · Comparación de organizaciones receptoras (RF-003). */
+.actual {
+  color: #286b48;
+  font-weight: 700;
+}
+
+.organizaciones {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.organizaciones legend {
+  padding: 0;
+  color: #344a3a;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ayuda {
+  margin: 0;
+  color: #68746b;
+  font-size: 12px;
+}
+
+.opciones {
+  display: grid;
+  gap: 10px;
+}
+
+.formulario .opcion {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: 4px 12px;
+  padding: 14px;
+  border: 1px solid #dfe6df;
+  border-radius: 12px;
+  background: #fbfcfb;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.opcion:hover {
+  border-color: #b9d3c1;
+}
+
+.opcion input {
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
+  accent-color: #286b48;
+}
+
+.opcion:has(input:focus-visible) {
+  box-shadow: 0 0 0 4px rgb(57 128 91 / 12%);
+}
+
+.elegida {
+  border-color: #39805b;
+  background: #f1f8f3;
+}
+
+.nombre {
+  color: #27382d;
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.nombre small {
+  color: #39805b;
+  font-size: 12px;
+}
+
+.datos {
+  display: grid;
+  grid-column: 2;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px 12px;
+  margin: 0;
+}
+
+.datos dt {
+  color: #7b867e;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.datos dd {
+  margin: 2px 0 0;
+  color: #344a3a;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 480px) {
+  .datos {
+    grid-template-columns: 1fr;
+  }
+
+  .datos div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .datos dd {
+    margin: 0;
+    text-align: right;
+  }
+}
