@@ -7,13 +7,123 @@ Alternativa seleccionada: aplicación web responsiva con panel administrativo.
 
 La Red de Rescate de Alimentos ayuda a la Fundación Mesa Común a organizar los rescates de alimentos. Desde un enlace se podrán registrar avisos, asignar un voluntario, hacer seguimiento del rescate, confirmar la entrega y consultar reportes básicos. La fundación también podrá registrar avisos recibidos por llamada u otro medio cuando un comercio no pueda acceder a la página.
 
+## Arquitectura
+
+```mermaid
+flowchart LR
+    U["Navegador<br/>celular o computador"] -->|HTTPS| F["Frontend Next.js 16<br/>Vercel"]
+    F -->|"REST + JWT<br/>VITE_API_URL"| A["API FastAPI<br/>Render"]
+    A -->|"SQLAlchemy<br/>red privada"| D[("PostgreSQL 18<br/>Render")]
+    R["Computador del equipo<br/>pg_dump"] -.->|"IP permitida"| D
+```
+
+| Parte | Dónde | Qué contiene |
+|---|---|---|
+| Frontend | `src/frontend/` | Rutas en `src/app/`, pantallas por funcionalidad en `src/features/` y cliente de la API en `src/services/api/` |
+| API | `src/backend/app/` | `routers/` (HTTP y permisos), `schemas/` (validación), `services/` (reglas de negocio) y `models.py` |
+| Base de datos | `src/backend/migrations/versions/` | Migraciones de Alembic escritas a mano en SQL |
+
+Todo cambio de estado de un rescate pasa por `cambiar_estado()` (`app/services/transiciones.py`): el `UPDATE` condicional y la fila del historial van en la misma transacción.
+
+### Modelo de datos
+
+```mermaid
+erDiagram
+    usuarios }o--o| comercios : "comercio_id"
+    usuarios }o--o| organizaciones_receptoras : "organizacion_id"
+    usuarios ||--o| voluntarios : "usuario_id"
+    comercios ||--o{ rescates : "comercio_id"
+    organizaciones_receptoras |o--o{ rescates : "organizacion_id"
+    voluntarios |o--o{ rescates : "voluntario_id"
+    usuarios ||--o{ rescates : "registrado_por"
+    rescates ||--o{ historial_estados : "rescate_id"
+    usuarios ||--o{ historial_estados : "actor_id"
+
+    usuarios {
+        uuid id PK
+        text email
+        enum rol
+        enum estado
+        bool activo
+    }
+    comercios {
+        uuid id PK
+        text nombre
+        text direccion
+    }
+    organizaciones_receptoras {
+        uuid id PK
+        text nombre
+        numeric capacidad_kg
+        bool refrigeracion
+        text horario_recepcion
+    }
+    voluntarios {
+        uuid usuario_id PK
+        text medio_transporte
+        text disponibilidad
+    }
+    rescates {
+        uuid id PK
+        text alimento
+        timestamptz hora_limite
+        enum estado
+        timestamptz entregado_en
+        numeric cantidad_recibida
+        text unidad_recibida
+        int personas_beneficiadas
+    }
+    historial_estados {
+        bigint id PK
+        uuid rescate_id FK
+        enum estado_nuevo
+        uuid actor_id FK
+        jsonb detalle
+    }
+```
+
+`idempotency_keys` guarda las claves de `POST /api/v1/rescates`. `historial_estados` es de solo inserción (RNF-011).
+
+### Estados de un rescate
+
+```mermaid
+stateDiagram-v2
+    [*] --> disponible : comercio o fundación registra
+    disponible --> asignado : fundación asigna
+    asignado --> recogido : voluntario marca la entrega
+    recogido --> entregado : organización confirma la recepción
+    disponible --> no_completado : fundación cierra o comercio cancela
+    asignado --> no_completado : fundación cierra
+    entregado --> [*]
+    no_completado --> [*]
+```
+
 ## Cómo levantarlo
 
-El código de la aplicación vive en `src/`: el backend (FastAPI) en `src/backend/` y el frontend (React) en `src/frontend/`.
+El código de la aplicación vive en `src/`: el backend (FastAPI) en `src/backend/` y el frontend (Next.js) en `src/frontend/`.
+
+### Requisitos
+
+- Python 3.14
+- Node.js 20.9 o superior
+- PostgreSQL 18 (también sirve otra versión reciente)
+
+### Base de datos local
+
+Crea un usuario y las bases, con un usuario administrador de PostgreSQL (`psql` o pgAdmin). En pgAdmin, ejecuta las sentencias **una por una**, porque `CREATE DATABASE` no puede ir dentro de una transacción:
+
+```sql
+CREATE ROLE orbyte_dev LOGIN PASSWORD 'una-clave-de-desarrollo';
+CREATE DATABASE orbyte OWNER orbyte_dev;
+CREATE DATABASE orbyte_test OWNER orbyte_dev;
+```
 
 ### Variables de entorno
 
-1. Copia `.env.example` como `.env` en la raíz del repositorio y completa `DATABASE_URL` y `JWT_SECRET`.
+1. Copia `.env.example` como `.env` en la raíz del repositorio y completa:
+   - `DATABASE_URL=postgresql://orbyte_dev:una-clave-de-desarrollo@localhost:5432/orbyte`
+   - `TEST_DATABASE_URL`, igual pero terminando en `/orbyte_test`. Es opcional: sin ella se omiten las pruebas de integración.
+   - `JWT_SECRET`, con el valor que imprima `python -c "import secrets; print(secrets.token_urlsafe(48))"`.
 2. El archivo `.env` está en `.gitignore` y nunca se sube al repositorio.
 3. En producción las variables se configuran solo en los paneles de Render (backend, ver [Despliegue del backend](#despliegue-del-backend-en-render)) y Vercel (frontend: `VITE_API_URL`).
 4. Al arrancar el backend, si no existe, crea automáticamente un administrador inicial con el correo `marcela@gmail.com` y la contraseña por defecto `Admin123*` para desarrollo. Con `ENTORNO=produccion` esa contraseña se rechaza y el administrador no se crea hasta definir un `DEFAULT_ADMIN_PASSWORD` propio.
@@ -25,10 +135,11 @@ cd src/backend
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1   # Windows (PowerShell). En macOS o Linux: source .venv/bin/activate
 pip install -r requirements.txt
+alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
-La API queda en `http://localhost:8000` y `GET /health` responde `{"status": "ok"}`.
+La API queda en `http://localhost:8000`, `GET /health` responde `{"status": "ok"}` y la documentación interactiva está en `http://localhost:8000/docs`.
 
 Para correr las pruebas, desde `src/backend` y con el entorno virtual activo:
 
@@ -204,11 +315,9 @@ Para poblar la pantalla de asignación, la fundación puede consultar:
 Ambos listados requieren rol `fundacion` y no exponen correos, hashes de
 contraseña ni otros datos sensibles.
 
-Si el voluntario asignado no puede acudir, `PATCH
-/api/v1/rescates/{id}/reasignacion` permite reemplazarlo mientras el rescate no
-haya vencido. Requiere `organizacion_id`, `voluntario_id` y un `motivo`
-obligatorio; conserva la asignación anterior, la nueva, el motivo y el actor en
-el historial. Solo se puede reasignar un rescate ya asignado.
+Si un rescate no se puede completar, `POST /api/v1/rescates/{id}/no-completado`
+permite a `fundacion` cerrarlo con un `motivo` obligatorio mientras esté
+`disponible` o `asignado`. La reasignación no está habilitada.
 
 El voluntario asignado puede consultar en `GET /api/v1/rescates/{id}` la hora
 límite, el lugar de recogida, la cantidad y el lugar de entrega. Los demás
@@ -257,23 +366,36 @@ traslado: `lugar_recogida`, `hora_limite`, `cantidad_aprox` y
 campos devueltos se filtran según el rol y nunca incluyen credenciales,
 tokens ni hashes.
 
-### Matriz de permisos propuesta
+### Matriz de permisos por endpoint
 
-Los endpoints de negocio aún corresponden a otros issues; donde el plan técnico no determina permisos concretos se marca **Por definir**.
+Corresponde a lo implementado en `app/routers/`. Todas las rutas llevan el prefijo `/api/v1`, salvo `/health`. Sin token válido la respuesta es `401`; con un rol no permitido, `403`.
 
-| Endpoint | Permisos |
-|---|---|
-| `POST /api/v1/auth/login` | Público |
-| `POST /rescates` (#6) | `comercio` (solo el suyo) y `fundacion`; `voluntario` y `organizacion` reciben 403 |
-| `PATCH /rescates/{id}/asignacion` (#10) | `fundacion` |
-| `GET /rescates?estado=activos` (#37) | `fundacion` |
-| `GET /rescates/{id}` (#37) | Según propietario o asignación |
-| `POST /rescates/{id}/recogida` (#16) | Por definir |
-| `POST /rescates/{id}/entrega` (#17) | Por definir |
-| `GET /rescates` y `GET /rescates/{id}` (#37) | Por definir |
-| `GET /rescates/{id}/historial` (#43) | `fundacion`; se visualiza en la línea de tiempo de `/rescates/{id}` (#15) |
-| `POST /rescates/{id}/no-completado` (#44) | Por definir |
-| `GET /impacto` (#51) | Por definir |
+| Endpoint | Permitido a | Alcance |
+|---|---|---|
+| `GET /health` | Público | |
+| `POST /auth/login` | Público | Solo cuentas aprobadas y activas |
+| `POST /auth/register` | Público | No permite el rol `administrador`. `voluntario` y `organizacion` quedan aprobados; `fundacion` y `comercio`, pendientes |
+| `GET /auth/me` | Cualquier usuario autenticado | Su propia sesión |
+| `GET /admin/usuarios` | `administrador` | También en `/admin/users` y `/auth/admin/usuarios` |
+| `GET /admin/cuentas-pendientes` | `administrador` | También en `/auth/admin/cuentas-pendientes` |
+| `POST /admin/usuarios/{id}/aprobar`, `/rechazar`, `/desactivar`, `/reactivar` | `administrador` | También bajo `/auth/admin/usuarios/{id}/` |
+| `GET /fundacion/comercios` | `fundacion` | Solo cuentas de comercio |
+| `POST /fundacion/comercios/{id}/aprobar`, `/desactivar`, `/reactivar` | `fundacion` | Solo cuentas de comercio |
+| `GET /comercios`, `/organizaciones`, `/voluntarios` | `fundacion` | Sin correos ni credenciales |
+| `GET /rescates?estado=activos` | `fundacion` | Todos los rescates activos |
+| `POST /rescates` | `comercio`, `fundacion` | `comercio`: solo para su comercio |
+| `GET /rescates/mis-avisos` | `comercio` | Sus avisos |
+| `GET /rescates/mis-asignaciones` | `voluntario`, `organizacion` | Sus asignaciones |
+| `GET /rescates/{id}` | `fundacion`, `voluntario`, `organizacion`, `comercio` | `fundacion`: cualquiera. Los demás: solo los relacionados; si no, `404` |
+| `GET /rescates/{id}/historial` | `fundacion` | |
+| `PATCH /rescates/{id}` | `comercio` | Aviso propio, `disponible` y sin vencer |
+| `POST /rescates/{id}/cancelar` | `comercio` | Aviso propio, `disponible` y sin vencer |
+| `PATCH /rescates/{id}/asignacion` | `fundacion` | Solo rescates `disponible` |
+| `POST /rescates/{id}/no-completado` | `fundacion` | Solo rescates `disponible` o `asignado` |
+| `POST /rescates/{id}/entrega-voluntario` | `voluntario` | Solo el voluntario asignado |
+| `POST /rescates/{id}/recepcion` | `organizacion` | Solo la organización destino, con el rescate `recogido` |
+
+`GET /impacto` (#51) todavía no existe. Según el plan técnico será exclusivo de `fundacion`.
 
 Los datos de personas beneficiadas corresponden únicamente a `fundacion` y a la `organizacion` destino (RNF-005). Los endpoints que los expongan usarán `ROLES_VE_BENEFICIARIOS`.
 
