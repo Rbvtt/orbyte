@@ -8,7 +8,8 @@ from app.config import get_settings
 config = context.config
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # La app corre las migraciones al arrancar: sin esto se apagarían sus loggers.
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # Las migraciones se escriben a mano en SQL; no hay modelos ORM que autogenerar.
 target_metadata = None
