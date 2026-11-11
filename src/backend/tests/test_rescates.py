@@ -17,6 +17,7 @@ from app.models import (
     Usuario,
     UsuarioRol,
 )
+from app.schemas.rescates import RescateEntregaIn, RescateRecepcionIn
 from app.security import create_access_token
 
 
@@ -60,6 +61,38 @@ def valid_payload():
         "lugar_recogida": "Calle 1",
         "hora_limite": (datetime.now(timezone.utc) + timedelta(days=1)).isoformat(),
     }
+
+
+@pytest.mark.parametrize(("unidad", "es_medida"), [("kg", True), ("aprox", False)])
+def test_contrato_entrega_acepta_unidad_y_medicion_coherentes(unidad, es_medida):
+    payload = RescateEntregaIn(
+        recibido_por=uuid4(),
+        cantidad_recibida=1,
+        unidad=unidad,
+        es_medida=es_medida,
+    )
+
+    assert payload.unidad == unidad
+
+
+def test_contrato_entrega_rechaza_unidad_incoherente_con_medicion():
+    with pytest.raises(ValueError):
+        RescateEntregaIn(
+            recibido_por=uuid4(),
+            cantidad_recibida=1,
+            unidad="aprox",
+            es_medida=True,
+        )
+
+
+def test_recepcion_legacy_normaliza_aproximada_a_valor_de_base_de_datos():
+    payload = RescateRecepcionIn(
+        cantidad_recibida=1,
+        unidad_recibida="aproximada",
+        es_medida=False,
+    )
+
+    assert payload.unidad_recibida == "aprox"
 
 
 @pytest.mark.parametrize("rol", [UsuarioRol.VOLUNTARIO, UsuarioRol.ORGANIZACION])

@@ -96,6 +96,10 @@ def marcar_rescate_no_completado(
         raise
 
 
+class OrganizacionNoAutorizada(PermissionError):
+    pass
+
+
 def listar_historial_rescate(db: Session, rescate_id: UUID) -> list[dict]:
     """Devuelve el historial con el responsable y su rol en orden cronológico."""
     rescate_existe = db.scalar(select(Rescate.id).where(Rescate.id == rescate_id))
@@ -532,15 +536,16 @@ def confirmar_recepcion_organizacion(
     )
     if organizacion_id is None:
         db.rollback()
-        raise RescateNoEncontrado
-    asignado = db.scalar(
-        select(Rescate.id).where(
-            Rescate.id == rescate_id, Rescate.organizacion_id == organizacion_id
-        )
+        raise OrganizacionNoAutorizada
+    organizacion_destino_id = db.scalar(
+        select(Rescate.organizacion_id).where(Rescate.id == rescate_id)
     )
-    if asignado is None:
+    if organizacion_destino_id is None:
         db.rollback()
         raise RescateNoEncontrado
+    if organizacion_destino_id != organizacion_id:
+        db.rollback()
+        raise OrganizacionNoAutorizada
 
     try:
         actualizado = cambiar_estado(

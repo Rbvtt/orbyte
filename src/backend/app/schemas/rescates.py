@@ -147,18 +147,52 @@ class RescateHistorialOut(BaseModel):
 class RescateRecepcionIn(BaseModel):
     cantidad_recibida: float = Field(gt=0)
     es_medida: bool
-    unidad_recibida: Literal["kg", "aproximada"]
+    unidad_recibida: Literal["kg", "aprox", "aproximada"]
     personas_beneficiadas: int | None = Field(default=None, ge=0)
 
     @field_validator("unidad_recibida")
     @classmethod
     def unidad_consistente_con_medicion(
-        cls, value: Literal["kg", "aproximada"], info
-    ) -> Literal["kg", "aproximada"]:
+        cls, value: Literal["kg", "aprox", "aproximada"], info
+    ) -> Literal["kg", "aprox"]:
+        if value == "aproximada":
+            value = "aprox"
         es_medida = info.data.get("es_medida")
         if es_medida is not None and (value == "kg") != es_medida:
             raise ValueError("La unidad debe coincidir con el tipo de cantidad")
         return value
+
+
+class RescateEntregaIn(BaseModel):
+    recibido_por: UUID
+    cantidad_recibida: float = Field(gt=0)
+    es_medida: bool
+    unidad: Literal["kg", "aprox"]
+    personas_beneficiadas: int | None = Field(default=None, ge=0)
+
+    @field_validator("unidad")
+    @classmethod
+    def unidad_consistente_con_medicion(
+        cls, value: Literal["kg", "aprox"], info
+    ) -> Literal["kg", "aprox"]:
+        es_medida = info.data.get("es_medida")
+        if es_medida is not None and (value == "kg") != es_medida:
+            raise ValueError("La unidad debe coincidir con el tipo de cantidad")
+        return value
+
+
+class RescateEntregaOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    estado: RescateEstado
+    organizacion_id: UUID
+    recibido_por: UUID
+    cantidad_recibida: float
+    unidad: Literal["kg", "aprox"] = Field(validation_alias="unidad_recibida")
+    es_medida: bool
+    entregado_en: datetime
+    personas_beneficiadas: int | None
 
 
 class OrganizacionOut(BaseModel):
