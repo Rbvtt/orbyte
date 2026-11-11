@@ -452,6 +452,16 @@ def test_patch_hace_rollback_si_falla_historial(api_client, asignacion_data, mon
 
     monkeypatch.setattr(asignacion_data.db, "add", fail_historial)
 
+    # Desde #35 la fila de historial la inserta cambiar_estado() con SQL: también se hace fallar ahí.
+    original_execute = asignacion_data.db.execute
+
+    def fail_insert_historial(statement, *args, **kwargs):
+        if "INSERT INTO historial_estados" in str(statement):
+            raise RuntimeError("fallo de prueba al insertar historial")
+        return original_execute(statement, *args, **kwargs)
+
+    monkeypatch.setattr(asignacion_data.db, "execute", fail_insert_historial)
+
     with pytest.raises(RuntimeError, match="fallo de prueba"):
         api_client.patch(
             f"/api/v1/rescates/{asignacion_data.rescate.id}/asignacion",

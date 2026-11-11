@@ -449,7 +449,9 @@ La migración `0004` deja ese historial con la forma de #35: `historial_estados`
 `ocurrido_en`, `detalle`), de solo inserción: un `UPDATE` o `DELETE` sobre la tabla
 falla. El servicio para las transiciones de estado es `cambiar_estado()` de
 `app/services/transiciones.py`: hace el `UPDATE` condicional y la fila del
-historial en la misma transacción.
+historial en la misma transacción. La usan todas las transiciones (asignación,
+cancelación, no completado, entrega y recepción). Las pruebas de estos criterios están
+en `tests/test_historial_estados.py`.
 
 La migración `0006` hace que `rescates.unidad_recibida` acepte `kg` o `aproximada`, los
 mismos valores que envía la API. Antes la base esperaba `aprox` y la recepción con cantidad
