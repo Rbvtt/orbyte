@@ -25,6 +25,16 @@ El proyecto tiene dos fechas clave: el **11 de noviembre** (3C) y el **14 de nov
 
 Cualquier base creada a partir del 15 de octubre llega al 14 de noviembre sin vencer. Si hay que recrearla, el plazo de 30 días vuelve a empezar desde la nueva fecha.
 
+### Fecha real de creación
+
+La base `orbyte-db` se creó el **10 de noviembre de 2026** con el Blueprint de `render.yaml` (#28), en la región Virginia.
+
+| Creada el | Vence el | Se borra el (sin pasar a pago) |
+|---|---|---|
+| **10 nov 2026** | **10 dic 2026** | **24 dic 2026** |
+
+Llega sin vencer a la 3C (11 de noviembre) y a la Demo (14 de noviembre). Quedan 26 días de margen después de la Demo. El paso a plan pago debe hacerse **antes del 10 de diciembre de 2026**.
+
 ## Opciones comparadas
 
 Precios oficiales consultados el 23 de octubre de 2026. Conversión con la TRM del 21 de octubre de 2026: **$3.163,76 COP por dólar**.
@@ -43,7 +53,7 @@ Todas las opciones pagas cumplen RNF-008. Incluso con un dólar a $4.500, la opc
 
 ## Decisión propuesta
 
-1. **Hasta la Demo (14 de noviembre): Render Free.** La base se crea cuando se despliegue el backend (#28). Si se crea el 24 de octubre, vence el 23 de noviembre: quedan 9 días de margen después de la Demo, sin costo.
+1. **Hasta la Demo (14 de noviembre): Render Free.** La base se creó con el despliegue del backend (#28) el 10 de noviembre y vence el 10 de diciembre: quedan 26 días de margen después de la Demo, sin costo.
 2. **Antes de que venza y para la operación de la fundación: pasar la misma base a Render Basic-256mb.** Render permite el cambio sin perder datos. Cuesta unos **$19.900 COP al mes**, o unos **$42.100 COP al mes** con el web service Starter. Se mantiene una sola plataforma, como dice el plan técnico, y se gana PITR de 3 días.
 3. **Alternativa sin costo: Neon Free.** Si la fundación no puede asumir el pago, se migra la base a Neon. Solo cambia `DATABASE_URL`: las migraciones de Alembic funcionan igual. Las desventajas son agregar un proveedor, la reactivación tras 5 minutos sin uso y un historial de solo 6 horas.
 
@@ -51,7 +61,7 @@ Se descarta Supabase. Su plan gratuito se pausa tras una semana sin uso y solo t
 
 ## Consecuencias
 
-- Hay que **registrar la fecha real de creación de la base** en este ADR cuando se haga #28. También hay que poner un recordatorio para pasarla a pago **antes** de la fecha de vencimiento.
+- La fecha real de creación quedó registrada arriba (10 de noviembre de 2026). Hay que poner un recordatorio para pasarla a pago **antes del 10 de diciembre de 2026**.
 - En el plan gratuito no hay respaldos gestionados. Mientras tanto, #56 (respaldo con `pg_dump`) es la única protección de los datos.
 - Solo se permite una base gratuita por workspace. Las pruebas no deben crear una segunda base en el mismo workspace de Render.
 - El pago mensual queda a cargo de la fundación desde que la base pase al plan pago. El Product Owner debe confirmar quién paga y con qué medio de pago antes de la fecha de vencimiento.
