@@ -53,6 +53,15 @@ class RescateNoEditable(RuntimeError):
     pass
 
 
+# #16 · Acciones que el historial distingue cuando un rescate está `recogido`.
+ACCION_RECOGIDA = "recogida_registrada"
+ACCION_ENTREGA_VOLUNTARIO = "entrega_confirmada_por_voluntario"
+
+
+class RecogidaNoPermitida(PermissionError):
+    """El rescate existe, pero quien registra la recogida no es el voluntario asignado."""
+
+
 class ConflictoEstadoRescate(RuntimeError):
     pass
 
@@ -449,6 +458,9 @@ def listar_asignaciones_usuario(db: Session, usuario: CurrentUser) -> list[dict]
         )
         .order_by(Rescate.hora_limite.asc())
     ).all()
+    recogidas_pendientes = _recogidas_sin_entrega(
+        db, [fila[0].id for fila in rows if fila[0].estado == RescateEstado.RECOGIDO]
+    )
     return [
         {
             "id": rescate.id,
@@ -470,6 +482,9 @@ def listar_asignaciones_usuario(db: Session, usuario: CurrentUser) -> list[dict]
                 else "recibido"
                 if usuario.rol == UsuarioRol.ORGANIZACION.value
                 and rescate.estado == RescateEstado.ENTREGADO
+                else "recogido"
+                if usuario.rol == UsuarioRol.VOLUNTARIO.value
+                and rescate.id in recogidas_pendientes
                 else "entregado_por_voluntario"
                 if usuario.rol == UsuarioRol.VOLUNTARIO.value
                 and rescate.estado == RescateEstado.RECOGIDO
@@ -509,8 +524,22 @@ def marcar_entregado_por_voluntario(
             voluntario_id,
             condiciones={"voluntario_id": voluntario_id},
             marca_tiempo="recogido_en",
-            detalle={"accion": "entrega_confirmada_por_voluntario"},
+            detalle={"accion": ACCION_ENTREGA_VOLUNTARIO},
         )
+        if not actualizado:
+            # #16: si antes registró la recogida, el rescate ya está `recogido`; la entrega del
+            # voluntario queda en el historial sin cambiar el estado (la organización la confirma).
+            db.scalar(select(Rescate.id).where(Rescate.id == rescate_id).with_for_update())
+            if rescate_id in _recogidas_sin_entrega(db, [rescate_id]):
+                actualizado = cambiar_estado(
+                    db,
+                    rescate_id,
+                    RescateEstado.RECOGIDO,
+                    RescateEstado.RECOGIDO,
+                    voluntario_id,
+                    condiciones={"voluntario_id": voluntario_id},
+                    detalle={"accion": ACCION_ENTREGA_VOLUNTARIO},
+                )
         if not actualizado:
             raise ConflictoEstadoRescate
         db.commit()
@@ -521,6 +550,67 @@ def marcar_entregado_por_voluntario(
     except Exception:
         db.rollback()
         raise
+
+
+def _recogidas_sin_entrega(db: Session, rescate_ids: list[UUID]) -> set[UUID]:
+    """Rescates cuya recogida se registró (#16) y cuyo voluntario aún no marcó la entrega."""
+    if not rescate_ids:
+        return set()
+    filas = db.execute(
+        text(
+            "SELECT rescate_id, "
+            "bool_or(detalle->>'accion' = :recogida) AS recogida, "
+            "bool_or(detalle->>'accion' = :entrega) AS entrega "
+            "FROM historial_estados WHERE rescate_id = ANY(:ids) GROUP BY rescate_id"
+        ),
+        {"ids": list(rescate_ids), "recogida": ACCION_RECOGIDA, "entrega": ACCION_ENTREGA_VOLUNTARIO},
+    ).all()
+    return {fila.rescate_id for fila in filas if fila.recogida and not fila.entrega}
+
+
+def registrar_recogida(db: Session, rescate_id: UUID, voluntario_id: UUID) -> dict:
+    """#16 · CA-04.1: el voluntario asignado registra la recogida (asignado → recogido).
+
+    UPDATE condicional `WHERE estado = 'asignado' AND voluntario_id = :sub` y la fila del
+    historial en la misma transacción (cambiar_estado de #35).
+    """
+    rescate = db.get(Rescate, rescate_id)
+    if rescate is None:
+        db.rollback()
+        raise RescateNoEncontrado
+    if rescate.voluntario_id != voluntario_id:
+        db.rollback()
+        raise RecogidaNoPermitida
+    try:
+        actualizado = cambiar_estado(
+            db,
+            rescate_id,
+            RescateEstado.ASIGNADO,
+            RescateEstado.RECOGIDO,
+            voluntario_id,
+            condiciones={"voluntario_id": voluntario_id},
+            marca_tiempo="recogido_en",
+            detalle={"accion": ACCION_RECOGIDA},
+        )
+        if not actualizado:
+            raise ConflictoEstadoRescate
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    fila = db.execute(
+        select(Rescate, Usuario.nombre)
+        .join(Usuario, Usuario.id == Rescate.voluntario_id)
+        .where(Rescate.id == rescate_id)
+        .execution_options(populate_existing=True)
+    ).one()
+    return {
+        "id": fila.Rescate.id,
+        "estado": fila.Rescate.estado,
+        "voluntario_id": fila.Rescate.voluntario_id,
+        "voluntario": fila.nombre,
+        "recogido_en": fila.Rescate.recogido_en,
+    }
 
 
 def confirmar_recepcion_organizacion(
@@ -668,7 +758,10 @@ def obtener_detalle_rescate(
         )
     elif usuario.rol == UsuarioRol.VOLUNTARIO.value:
         detalle["estado_visual"] = (
-            "entregado_por_voluntario"
+            "recogido"
+            if rescate.estado == RescateEstado.RECOGIDO
+            and rescate.id in _recogidas_sin_entrega(db, [rescate.id])
+            else "entregado_por_voluntario"
             if rescate.estado == RescateEstado.RECOGIDO
             else rescate.estado.value
         )
@@ -681,6 +774,7 @@ def obtener_detalle_rescate(
                 "id",
                 "estado",
                 "estado_visual",
+                "voluntario_id",
                 "hora_limite",
                 "pendiente_asignar",
                 "cantidad_aprox",

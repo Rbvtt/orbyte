@@ -17,11 +17,13 @@ from app.schemas.rescates import (
     RescateNoCompletadoOut,
     RescateOut,
     RescateRecepcionIn,
+    RescateRecogidaOut,
     RescateUpdate,
 )
 from app.services.rescates import (
     ConflictoEstadoRescate,
     ConflictoAsignacion,
+    RecogidaNoPermitida,
     RecursoAsignacionNoEncontrado,
     RescateNoEditable,
     RescateNoEncontrado,
@@ -37,6 +39,7 @@ from app.services.rescates import (
     listar_rescates_activos,
     marcar_rescate_no_completado,
     obtener_detalle_rescate,
+    registrar_recogida,
 )
 
 
@@ -119,6 +122,32 @@ def post_entrega_voluntario(
             status_code=status.HTTP_409_CONFLICT,
             detail="El rescate ya no está asignado para registrar la entrega",
         ) from None
+
+
+@router.post("/{rescate_id}/recogida", response_model=RescateRecogidaOut)
+def post_recogida(
+    rescate_id: UUID,
+    current_user: CurrentUser = Depends(require_role("voluntario")),
+    db: Session = Depends(get_db),
+) -> RescateRecogidaOut:
+    """#16 · CA-04.1: el voluntario asignado registra la recogida (asignado → recogido)."""
+    if current_user.usuario_id is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="No autorizado")
+    try:
+        recogida = registrar_recogida(db, rescate_id, current_user.usuario_id)
+    except RescateNoEncontrado:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="El rescate no existe") from None
+    except RecogidaNoPermitida:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo el voluntario asignado puede registrar la recogida",
+        ) from None
+    except ConflictoEstadoRescate:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Solo se puede registrar la recogida de un rescate asignado",
+        ) from None
+    return RescateRecogidaOut(**recogida)
 
 
 @router.post("/{rescate_id}/recepcion", status_code=status.HTTP_204_NO_CONTENT)

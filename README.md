@@ -375,6 +375,22 @@ Los rescates asignados, finalizados o vencidos no pueden editarse ni cancelarse
 por el comercio. Las operaciones también verifican en el backend la propiedad
 del aviso.
 
+### Recogida y entrega
+
+- `POST /api/v1/rescates/{id}/recogida` (#16 · CA-04.1): solo `voluntario` y
+  solo el asignado al rescate. Pasa el rescate de `asignado` a `recogido`, guarda
+  `recogido_en` y deja la fila `asignado → recogido` del historial en la misma
+  transacción. Responde `200` con `id`, `estado`, `voluntario_id`, `voluntario` y
+  `recogido_en`; `403` si es otro voluntario, `409` si el rescate no está
+  `asignado` y `404` si no existe. En `/rescates/{id}` el voluntario asignado ve
+  el botón **Registrar recogida** con confirmación.
+- `POST /api/v1/rescates/{id}/entrega-voluntario`: el voluntario marca la
+  donación como entregada. Si antes registró la recogida, el estado sigue
+  `recogido` y la entrega queda en el historial; para el voluntario el estado se
+  muestra como `recogido` hasta que marque la entrega.
+- `POST /api/v1/rescates/{id}/recepcion`: la organización destino confirma la
+  recepción y el rescate pasa a `entregado`.
+
 ### Consulta y seguimiento de rescates
 
 `GET /api/v1/rescates?estado=activos` está disponible únicamente para
@@ -426,6 +442,7 @@ Corresponde a lo implementado en `app/routers/`. Todas las rutas llevan el prefi
 | `POST /rescates/{id}/cancelar` | `comercio` | Aviso propio, `disponible` y sin vencer |
 | `PATCH /rescates/{id}/asignacion` | `fundacion` | Solo rescates `disponible` |
 | `POST /rescates/{id}/no-completado` | `fundacion` | Solo rescates `disponible` o `asignado` |
+| `POST /rescates/{id}/recogida` | `voluntario` | Solo el voluntario asignado, con el rescate `asignado` |
 | `POST /rescates/{id}/entrega-voluntario` | `voluntario` | Solo el voluntario asignado |
 | `POST /rescates/{id}/recepcion` | `organizacion` | Solo la organización destino, con el rescate `recogido` |
 
