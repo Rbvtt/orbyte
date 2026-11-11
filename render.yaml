@@ -38,4 +38,6 @@ databases:
     databaseName: orbyte
     plan: free
     region: virginia # La misma región de la API, para usar la red privada.
-    ipAllowList: [] # Bloquea las conexiones externas. #56 deberá permitir la IP que haga los respaldos.
+    # Sin ipAllowList: las IP se administran en el panel (Access Control), para no publicarlas en este repositorio.
+    # Una base existente conserva sus reglas. La base ya se creó con todas las conexiones externas bloqueadas.
+    # Si se recrea desde este archivo, Render permite todas las IP: hay que restringirlas en el panel.

@@ -73,7 +73,36 @@ Limitaciones del plan gratuito:
 
 - La API se apaga tras 15 minutos sin tráfico y tarda cerca de un minuto en volver (#57).
 - La base vence a los 30 días de creada, con 14 días de gracia, y no tiene respaldos (ver [ADR 0001](docs/decisiones/0001-plan-base-de-datos-render.md) y #56).
-- La base no acepta conexiones externas (`ipAllowList: []`). Para conectarse desde afuera, hay que agregar la IP en `render.yaml`.
+- La base no acepta conexiones externas salvo las IP que se agreguen en el panel: **orbyte-db → Info → Access Control**. No se ponen en `render.yaml`, porque este repositorio es público.
+
+## Respaldos de la base
+
+El plan gratuito de Render no hace respaldos, así que se hacen con `pg_dump` desde un computador del equipo (#56). Requiere PowerShell 7 y las herramientas cliente de PostgreSQL 18. Los scripts están en `scripts/respaldo/`.
+
+Una sola vez:
+
+1. En Render, agrega la IP pública del computador en **orbyte-db → Info → Access Control**. Si la IP cambia, el respaldo falla hasta que se actualice.
+2. Guarda la URL de conexión. El script pide la **External Database URL** de `orbyte-db` y la cifra para tu usuario de Windows:
+
+   ```powershell
+   ./scripts/respaldo/respaldar.ps1 -Configurar
+   ```
+
+3. Crea la tarea diaria (por defecto a las 20:00; si el computador estaba apagado, corre apenas se pueda):
+
+   ```powershell
+   ./scripts/respaldo/respaldar.ps1 -Programar
+   ```
+
+Para un respaldo manual, ejecuta `./scripts/respaldo/respaldar.ps1`. Los archivos quedan en `~/OrbyteRespaldos` (se conservan los últimos 14) y el resultado de cada corrida en `respaldos.log`. **Contienen datos personales y hashes de contraseñas:** no se suben al repositorio ni se comparten por chat.
+
+Para comprobar que un respaldo sirve, restáuralo en una base local vacía. Primero, con un usuario administrador, `CREATE DATABASE orbyte_restaurada OWNER orbyte_dev;`. Luego:
+
+```powershell
+./scripts/respaldo/restaurar.ps1 -Archivo "$HOME/OrbyteRespaldos/orbyte-AAAAMMDD-HHMMSS.dump"
+```
+
+El script solo restaura en un servidor local y en una base sin tablas. Al final muestra la migración aplicada y las filas de cada tabla.
 
 ## Autenticación y permisos
 
