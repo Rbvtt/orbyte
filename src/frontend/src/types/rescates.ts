@@ -84,3 +84,12 @@ export interface RescateAvisoComercio {
   creado_en: string;
   motivo_no_completado: string | null;
 }
+
+/** POST /api/v1/rescates/{id}/recogida (RescateRecogidaOut · #16). */
+export interface RescateRecogida {
+  id: string;
+  estado: "recogido";
+  voluntario_id: string;
+  voluntario: string;
+  recogido_en: string;
+}
