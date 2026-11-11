@@ -56,6 +56,8 @@ export interface RescateDetalle {
   asignado_por?: string;
   observaciones?: string;
   origen_aviso?: "comercio" | "fundacion";
+  /** Solo se entrega a fundación cuando el rescate quedó como no completado. */
+  motivo_no_completado?: string;
 }
 
 export interface RescateHistorial {

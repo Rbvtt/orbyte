@@ -345,8 +345,13 @@ Ambos listados requieren rol `fundacion` y no exponen correos, hashes de
 contraseña ni otros datos sensibles.
 
 Si un rescate no se puede completar, `POST /api/v1/rescates/{id}/no-completado`
-permite a `fundacion` cerrarlo con un `motivo` obligatorio mientras esté
-`disponible` o `asignado`. La reasignación no está habilitada.
+(#44 · CA-03.4) permite a `fundacion` cerrarlo mientras esté `disponible` o
+`asignado`. Recibe `{"motivo":"..."}` con texto obligatorio (máximo 2000
+caracteres); el cambio de estado, `motivo_no_completado` y la fila del historial
+se escriben en la misma transacción. Devuelve `409` si el rescate ya está
+recogido o entregado y `404` si no existe. El detalle incluye el motivo solo para
+la fundación, y en la pantalla de detalle la fundación confirma la acción antes de
+enviarla. La reasignación no está habilitada.
 
 El voluntario asignado puede consultar en `GET /api/v1/rescates/{id}` la hora
 límite, el lugar de recogida, la cantidad y el lugar de entrega. Los demás

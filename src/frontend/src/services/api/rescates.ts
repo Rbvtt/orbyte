@@ -22,6 +22,7 @@ export const rescatesApi = {
   detalle: (id: string, signal?: AbortSignal) => apiFetch<RescateDetalle>(`/api/v1/rescates/${id}`, { signal }),
   historial: (id: string, signal?: AbortSignal) =>
     apiFetch<RescateHistorial[]>(`/api/v1/rescates/${id}/historial`, { signal }),
+  /** POST /api/v1/rescates/{id}/no-completado (#44). Solo fundación; motivo obligatorio. */
   marcarNoCompletado: (id: string, motivo: string) =>
     apiFetch<RescateAvisoComercio>(`/api/v1/rescates/${id}/no-completado`, {
       method: "POST",
