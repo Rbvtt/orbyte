@@ -3,6 +3,10 @@
 .env.*
 !.env.example
 
+# Respaldos de la base: contienen datos personales
+*.dump
+*.dump.parcial
+
 # Python
 __pycache__/
 *.py[cod]
