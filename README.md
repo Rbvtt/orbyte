@@ -75,6 +75,26 @@ Limitaciones del plan gratuito:
 - La base vence a los 30 días de creada, con 14 días de gracia, y no tiene respaldos (ver [ADR 0001](docs/decisiones/0001-plan-base-de-datos-render.md) y #56).
 - La base no acepta conexiones externas (`ipAllowList: []`). Para conectarse desde afuera, hay que agregar la IP en `render.yaml`.
 
+La API desplegada está en `https://orbyte-api-ecow.onrender.com` (documentación en `/docs`).
+
+## Despliegue del frontend en Vercel
+
+El frontend desplegado está en `https://orbyte-dun.vercel.app`. El proyecto de Vercel está en la cuenta de Rbvtt, dueño del repositorio: Vercel no deja que otra cuenta personal lo enlace, aunque tenga permiso de escritura. Cambiar variables, ver los logs o redesplegar se hace desde esa cuenta.
+
+Para crearlo de nuevo: en el panel de Vercel, **Add New → Project**, importa este repositorio y configura:
+
+| Campo | Valor |
+|---|---|
+| Root Directory | `src/frontend` |
+| Framework Preset | Next.js (Vercel lo detecta solo; build e install quedan por defecto) |
+| Variable `VITE_API_URL` | `https://orbyte-api-ecow.onrender.com`, sin `/` final, en Production y Preview |
+
+`VITE_API_URL` queda fija en el código cuando se compila. Si cambia, hay que volver a desplegar. Cada merge a `main` despliega solo.
+
+No hace falta un rewrite: Next.js sirve las rutas profundas como `/rescates/123` por sí mismo.
+
+Después del primer despliegue, copia el dominio de producción de Vercel en `CORS_ORIGINS` en Render (hoy `https://orbyte-dun.vercel.app`). Si se dejó vacía al crear el Blueprint, Render no la guarda: hay que agregarla en **orbyte-api → Environment** y redesplegar. Los despliegues de vista previa usan otros dominios: CORS los rechaza y no pueden iniciar sesión contra la API desplegada.
+
 ## Autenticación y permisos
 
 Para obtener un token, envía el correo y la contraseña a `POST /api/v1/auth/login`:
