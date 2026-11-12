@@ -363,6 +363,126 @@ def test_organizacion_no_confirma_antes_de_entrega_voluntario(api_client, consul
     assert consulta_data.asignado.estado == RescateEstado.ASIGNADO
 
 
+def test_entrega_registra_recepcion_y_historial(api_client, consulta_data):
+    recoger = api_client.post(
+        f"/api/v1/rescates/{consulta_data.asignado.id}/entrega-voluntario",
+        headers=_headers(consulta_data.voluntario),
+    )
+    assert recoger.status_code == 204
+
+    response = api_client.post(
+        f"/api/v1/rescates/{consulta_data.asignado.id}/entrega",
+        headers=_headers(consulta_data.usuario_organizacion),
+        json={
+            "recibido_por": str(consulta_data.usuario_organizacion.id),
+            "cantidad_recibida": 8.5,
+            "unidad": "kg",
+            "es_medida": True,
+            "personas_beneficiadas": 12,
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["estado"] == RescateEstado.ENTREGADO.value
+    assert body["organizacion_id"] == str(consulta_data.organizacion.id)
+    assert body["recibido_por"] == str(consulta_data.usuario_organizacion.id)
+    assert body["cantidad_recibida"] == 8.5
+    assert body["unidad"] == "kg"
+    assert body["es_medida"] is True
+    assert body["entregado_en"] is not None
+    assert body["personas_beneficiadas"] == 12
+
+    consulta_data.db.refresh(consulta_data.asignado)
+    assert consulta_data.asignado.estado == RescateEstado.ENTREGADO
+    historial = api_client.get(
+        f"/api/v1/rescates/{consulta_data.asignado.id}/historial",
+        headers=_headers(consulta_data.fundacion),
+    )
+    assert historial.status_code == 200
+    assert [(item["estado_anterior"], item["estado_nuevo"]) for item in historial.json()][-1] == (
+        RescateEstado.RECOGIDO.value,
+        RescateEstado.ENTREGADO.value,
+    )
+
+
+def test_entrega_acepta_unidad_aproximada_y_guarda_valor_canonico(
+    api_client, consulta_data
+):
+    response = api_client.post(
+        f"/api/v1/rescates/{consulta_data.recogido.id}/entrega",
+        headers=_headers(consulta_data.usuario_organizacion),
+        json={
+            "recibido_por": str(consulta_data.usuario_organizacion.id),
+            "cantidad_recibida": 8.5,
+            "unidad": "aprox",
+            "es_medida": False,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["unidad"] == "aprox"
+    consulta_data.db.refresh(consulta_data.recogido)
+    assert consulta_data.recogido.unidad_recibida == "aprox"
+
+
+def test_entrega_de_organizacion_distinta_responde_403_sin_cambios(
+    api_client, consulta_data
+):
+    response = api_client.post(
+        f"/api/v1/rescates/{consulta_data.recogido.id}/entrega",
+        headers=_headers(consulta_data.usuario_otra_organizacion),
+        json={
+            "recibido_por": str(consulta_data.usuario_otra_organizacion.id),
+            "cantidad_recibida": 8.5,
+            "unidad": "kg",
+            "es_medida": True,
+        },
+    )
+
+    assert response.status_code == 403
+    consulta_data.db.refresh(consulta_data.recogido)
+    assert consulta_data.recogido.estado == RescateEstado.RECOGIDO
+    assert consulta_data.recogido.recibido_por is None
+
+
+def test_entrega_de_rescate_no_recogido_responde_409_sin_cambios(
+    api_client, consulta_data
+):
+    response = api_client.post(
+        f"/api/v1/rescates/{consulta_data.asignado.id}/entrega",
+        headers=_headers(consulta_data.usuario_organizacion),
+        json={
+            "recibido_por": str(consulta_data.usuario_organizacion.id),
+            "cantidad_recibida": 8.5,
+            "unidad": "kg",
+            "es_medida": True,
+        },
+    )
+
+    assert response.status_code == 409
+    consulta_data.db.refresh(consulta_data.asignado)
+    assert consulta_data.asignado.estado == RescateEstado.ASIGNADO
+    assert consulta_data.asignado.recibido_por is None
+
+
+def test_entrega_no_permite_suplantar_recibido_por(api_client, consulta_data):
+    response = api_client.post(
+        f"/api/v1/rescates/{consulta_data.recogido.id}/entrega",
+        headers=_headers(consulta_data.usuario_organizacion),
+        json={
+            "recibido_por": str(consulta_data.fundacion.id),
+            "cantidad_recibida": 8.5,
+            "unidad": "kg",
+            "es_medida": True,
+        },
+    )
+
+    assert response.status_code == 403
+    consulta_data.db.refresh(consulta_data.recogido)
+    assert consulta_data.recogido.estado == RescateEstado.RECOGIDO
+
+
 def test_voluntario_ajeno_no_puede_marcar_entrega(api_client, consulta_data):
     response = api_client.post(
         f"/api/v1/rescates/{consulta_data.asignado.id}/entrega-voluntario",

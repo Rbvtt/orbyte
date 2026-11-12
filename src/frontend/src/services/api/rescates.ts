@@ -22,14 +22,14 @@ export const rescatesApi = {
   detalle: (id: string, signal?: AbortSignal) => apiFetch<RescateDetalle>(`/api/v1/rescates/${id}`, { signal }),
   historial: (id: string, signal?: AbortSignal) =>
     apiFetch<RescateHistorial[]>(`/api/v1/rescates/${id}/historial`, { signal }),
+  marcarNoCompletado: (id: string, motivo: string) =>
+    apiFetch<RescateAvisoComercio>(`/api/v1/rescates/${id}/no-completado`, {
+      method: "POST",
+      body: { motivo },
+    }),
   asignar: (id: string, datos: { organizacion_id: string; voluntario_id: string; motivo?: string }) =>
     apiFetch<{ id: string; estado: string; organizacion_id: string; voluntario_id: string }>(
       `/api/v1/rescates/${id}/asignacion`,
-      { method: "PATCH", body: datos },
-    ),
-  reasignar: (id: string, datos: { organizacion_id: string; voluntario_id: string; motivo: string }) =>
-    apiFetch<{ id: string; estado: string; organizacion_id: string; voluntario_id: string }>(
-      `/api/v1/rescates/${id}/reasignacion`,
       { method: "PATCH", body: datos },
     ),
   misAvisos: (signal?: AbortSignal) =>

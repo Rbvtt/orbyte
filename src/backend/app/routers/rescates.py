@@ -11,18 +11,21 @@ from app.schemas.rescates import (
     RescateComercioOut,
     RescateCreate,
     RescateDetalleOut,
+    RescateEntregaIn,
+    RescateEntregaOut,
     RescateHistorialOut,
     RescateListaOut,
     RescateNoCompletadoIn,
     RescateNoCompletadoOut,
     RescateOut,
-    RescateReasignacionIn,
     RescateRecepcionIn,
+    RescateReasignacionIn,
     RescateUpdate,
 )
 from app.services.rescates import (
     ConflictoEstadoRescate,
     ConflictoAsignacion,
+    OrganizacionNoAutorizada,
     RecursoAsignacionNoEncontrado,
     RescateNoEditable,
     RescateNoEncontrado,
@@ -141,6 +144,11 @@ def post_recepcion_organizacion(
             datos.es_medida,
             datos.personas_beneficiadas,
         )
+    except OrganizacionNoAutorizada:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tu organización no es el destino de este rescate",
+        ) from None
     except RescateNoEncontrado:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="El rescate no existe") from None
     except ConflictoEstadoRescate:
@@ -148,6 +156,49 @@ def post_recepcion_organizacion(
             status_code=status.HTTP_409_CONFLICT,
             detail="El rescate todavía no está entregado por el voluntario",
         ) from None
+
+
+@router.post(
+    "/{rescate_id}/entrega",
+    response_model=RescateEntregaOut,
+    status_code=status.HTTP_200_OK,
+)
+def post_entrega_organizacion(
+    rescate_id: UUID,
+    datos: RescateEntregaIn,
+    current_user: CurrentUser = Depends(require_role("organizacion")),
+    db: Session = Depends(get_db),
+) -> RescateEntregaOut:
+    if current_user.usuario_id is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="No autorizado")
+    if datos.recibido_por != current_user.usuario_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="El usuario que recibe debe ser el usuario autenticado",
+        )
+    try:
+        rescate = confirmar_recepcion_organizacion(
+            db,
+            rescate_id,
+            current_user.usuario_id,
+            datos.cantidad_recibida,
+            datos.unidad,
+            datos.es_medida,
+            datos.personas_beneficiadas,
+        )
+    except OrganizacionNoAutorizada:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tu organización no es el destino de este rescate",
+        ) from None
+    except RescateNoEncontrado:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="El rescate no existe") from None
+    except ConflictoEstadoRescate:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="El rescate no está recogido o ya fue entregado",
+        ) from None
+    return RescateEntregaOut.model_validate(rescate)
 
 
 @router.get(
@@ -241,13 +292,37 @@ def cancel_comercio_aviso(
     return RescateComercioOut.model_validate(rescate)
 
 
+@router.post(
+    "/{rescate_id}/no-completado",
+    response_model=RescateNoCompletadoOut,
+)
+def post_no_completado(
+    rescate_id: UUID,
+    datos: RescateNoCompletadoIn,
+    current_user: CurrentUser = Depends(require_role("fundacion")),
+    db: Session = Depends(get_db),
+) -> RescateNoCompletadoOut:
+    if current_user.usuario_id is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="No autorizado")
+    try:
+        rescate = marcar_rescate_no_completado(
+            db, rescate_id, current_user.usuario_id, datos.motivo
+        )
+    except RescateNoEncontrado:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="El rescate no existe") from None
+    except ConflictoEstadoRescate:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Solo se pueden marcar como no completados rescates disponibles o asignados",
+        ) from None
+    return RescateNoCompletadoOut.model_validate(rescate)
+
+
 def _guardar_asignacion(
     rescate_id: UUID,
-    datos: RescateAsignacionIn | RescateReasignacionIn,
+    datos: RescateAsignacionIn,
     current_user: CurrentUser,
     db: Session,
-    *,
-    solo_reasignar: bool,
 ) -> RescateAsignacionOut:
     if current_user.usuario_id is None:
         raise RuntimeError("El usuario autenticado no tiene un identificador")
@@ -258,8 +333,6 @@ def _guardar_asignacion(
             datos.voluntario_id,
             datos.organizacion_id,
             current_user.usuario_id,
-            datos.motivo,
-            solo_reasignar=solo_reasignar,
         )
     except RescateNoEncontrado:
         raise HTTPException(
@@ -277,9 +350,7 @@ def _guardar_asignacion(
         ) from None
     except ConflictoAsignacion as exc:
         detail = (
-            "El rescate ya no está disponible para reasignación"
-            if solo_reasignar and exc.voluntario_nombre is None
-            else "El rescate ya no está disponible para asignación"
+            "El rescate ya no está disponible para asignación"
             if exc.voluntario_nombre is None
             else f"El rescate ya está asignado al voluntario {exc.voluntario_nombre}"
         )
