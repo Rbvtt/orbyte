@@ -643,6 +643,7 @@ def obtener_detalle_rescate(
     voluntario = aliased(Usuario)
     creador = aliased(Usuario)
     fundacion = aliased(Usuario)
+    recibido_por = aliased(Usuario)
     row = db.execute(
         select(
             Rescate,
@@ -654,12 +655,14 @@ def obtener_detalle_rescate(
             fundacion.nombre,
             Usuario.organizacion_id,
             Usuario.comercio_id,
+            recibido_por.nombre,
         )
         .join(Comercio, Comercio.id == Rescate.comercio_id)
         .join(creador, creador.id == Rescate.registrado_por)
         .outerjoin(organizacion, organizacion.id == Rescate.organizacion_id)
         .outerjoin(voluntario, voluntario.id == Rescate.voluntario_id)
         .outerjoin(fundacion, fundacion.id == Rescate.asignado_por)
+        .outerjoin(recibido_por, recibido_por.id == Rescate.recibido_por)
         .join(Usuario, Usuario.id == usuario.usuario_id)
         .where(Rescate.id == rescate_id)
     ).one_or_none()
@@ -676,6 +679,7 @@ def obtener_detalle_rescate(
         fundacion_nombre,
         usuario_organizacion_id,
         usuario_comercio_id,
+        recibido_por_nombre,
     ) = row
     autorizado = usuario.rol == UsuarioRol.FUNDACION.value or (
         usuario.rol == UsuarioRol.VOLUNTARIO.value
@@ -710,6 +714,17 @@ def obtener_detalle_rescate(
         "observaciones": rescate.observaciones,
         "origen_aviso": origen_aviso.value,
     }
+    if usuario.rol == UsuarioRol.ORGANIZACION.value:
+        detalle.update(
+            {
+                "recibido_por_nombre": recibido_por_nombre,
+                "cantidad_recibida": rescate.cantidad_recibida,
+                "unidad_recibida": rescate.unidad_recibida,
+                "es_medida": rescate.es_medida,
+                "personas_beneficiadas": rescate.personas_beneficiadas,
+                "entregado_en": rescate.entregado_en,
+            }
+        )
     if usuario.rol == UsuarioRol.ORGANIZACION.value:
         detalle["estado_visual"] = (
             "recibido"
@@ -752,10 +767,18 @@ def obtener_detalle_rescate(
                 "estado_visual",
                 "pendiente_asignar",
                 "comercio",
+                "alimento",
+                "cantidad_aprox",
                 "organizacion",
                 "voluntario",
                 "fundacion",
                 "asignado_en",
+                "recibido_por_nombre",
+                "cantidad_recibida",
+                "unidad_recibida",
+                "es_medida",
+                "personas_beneficiadas",
+                "entregado_en",
             )
         }
     return {

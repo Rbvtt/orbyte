@@ -616,9 +616,44 @@ def test_detalle_autoriza_organizacion_y_comercio_propietarios(
     assert organizacion.json()["fundacion"] == consulta_data.fundacion.nombre
     assert organizacion.json()["voluntario"] == consulta_data.voluntario.nombre
     assert organizacion.json()["estado_visual"] == "por_recibir"
+    assert organizacion.json()["alimento"] == consulta_data.asignado.alimento
+    assert organizacion.json()["cantidad_aprox"] == consulta_data.asignado.cantidad_aprox
     assert comercio.json()["comercio"] == consulta_data.comercio.nombre
     assert "lugar_recogida" not in organizacion.json()
     assert "cantidad_aprox" not in comercio.json()
+    assert "personas_beneficiadas" not in organizacion.json()
+
+
+def test_detalle_de_entrega_expone_datos_requeridos_solo_a_organizacion(
+    api_client, consulta_data
+):
+    rescate = consulta_data.entregado
+    rescate.recibido_por = consulta_data.usuario_organizacion.id
+    rescate.cantidad_recibida = 8.5
+    rescate.unidad_recibida = "kg"
+    rescate.es_medida = True
+    rescate.personas_beneficiadas = 12
+    rescate.entregado_en = datetime.now(timezone.utc)
+    consulta_data.db.commit()
+
+    organizacion = api_client.get(
+        f"/api/v1/rescates/{rescate.id}",
+        headers=_headers(consulta_data.usuario_organizacion),
+    )
+    comercio = api_client.get(
+        f"/api/v1/rescates/{rescate.id}",
+        headers=_headers(consulta_data.usuario_comercio),
+    )
+
+    assert organizacion.status_code == comercio.status_code == 200
+    body = organizacion.json()
+    assert body["recibido_por_nombre"] == consulta_data.usuario_organizacion.nombre
+    assert body["cantidad_recibida"] == 8.5
+    assert body["unidad_recibida"] == "kg"
+    assert body["es_medida"] is True
+    assert body["personas_beneficiadas"] == 12
+    assert body["entregado_en"]
+    assert "personas_beneficiadas" not in comercio.json()
 
 
 @pytest.mark.parametrize("usuario", ["usuario_otra_organizacion", "usuario_otro_comercio"])
