@@ -414,6 +414,12 @@ misma transacción. Devuelve `409` si el rescate ya está recogido o entregado y
 `404` si no existe. El detalle incluye el motivo solo para la fundación. En la
 pantalla de detalle, la fundación confirma la acción antes de enviarla.
 
+La organización receptora ve en el detalle los datos necesarios para revisar su
+recepción: alimento y cantidad de referencia; cuando ya se entregó, cantidad
+recibida, unidad, si fue medida o estimada, nombre de quien la recibió, fecha
+de entrega y beneficiarios. Esos campos solo se devuelven a la organización
+destino.
+
 ### Matriz de permisos por endpoint
 
 Corresponde a lo implementado en `app/routers/`. Todas las rutas llevan el prefijo `/api/v1`, salvo `/health`. Sin token válido la respuesta es `401`; con un rol no permitido, `403`.
@@ -458,7 +464,10 @@ incluyendo ambas fechas. Solo cuenta rescates entregados. Devuelve `kg_total`,
 devuelve el total de la métrica y los rescates que lo respaldan. Los detalles
 incluyen fecha de entrega, comercio, organización, cantidad recibida, tipo de
 medición y beneficiarios. Para `organizaciones`, los rescates se agrupan por
-organización. Ambas rutas rechazan periodos invertidos con `422`.
+organización. Ambas rutas rechazan periodos invertidos con `422`. La pantalla
+de la fundación está en `/fundacion/impacto`; permite seleccionar cada
+indicador, revisar sus rescates, comprobar que el respaldo suma el total y
+abrir el historial de cada rescate.
 
 Los datos de personas beneficiadas corresponden únicamente a `fundacion` y a la `organizacion` destino (RNF-005). Los endpoints que los expongan usarán `ROLES_VE_BENEFICIARIOS`.
 

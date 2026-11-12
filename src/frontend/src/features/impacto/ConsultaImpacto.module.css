@@ -1,0 +1,256 @@
+.pagina {
+  width: min(1200px, 100%);
+  margin: 0 auto;
+  padding: 32px 24px 60px;
+}
+
+.encabezado {
+  margin-bottom: 22px;
+}
+
+.kicker {
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.encabezado h1 {
+  margin: 5px 0;
+  color: var(--primary-strong);
+  font-size: clamp(26px, 4vw, 34px);
+  line-height: 1.2;
+}
+
+.encabezado p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.filtros {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+  align-items: end;
+  gap: 14px;
+  padding: 20px;
+}
+
+.filtros button {
+  min-width: 180px;
+}
+
+.resultados {
+  margin-top: 28px;
+}
+
+.resultadoCabecera,
+.detalleCabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 20px;
+  margin-bottom: 14px;
+}
+
+.resultadoCabecera h2,
+.detalleCabecera h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 19px;
+}
+
+.resultadoCabecera p,
+.detalleCabecera p {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+
+.resultadoCabecera > span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.tarjetas {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.tarjeta {
+  display: grid;
+  min-height: 150px;
+  align-content: space-between;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 8px 26px rgb(34 61 43 / 4%);
+}
+
+.tarjeta:hover,
+.tarjetaActiva {
+  border-color: var(--primary);
+  background: #f5faf6;
+}
+
+.tarjeta span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.tarjeta strong {
+  color: var(--primary-strong);
+  font-size: clamp(23px, 3vw, 31px);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+
+.tarjeta small {
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.detalle {
+  overflow: hidden;
+  margin-top: 24px;
+}
+
+.detalleCabecera {
+  margin: 0;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.detalleCabecera > strong {
+  color: var(--primary-strong);
+  font-size: 19px;
+  font-variant-numeric: tabular-nums;
+}
+
+.verificacion {
+  margin: 14px 20px;
+  padding: 11px 13px;
+  border-radius: var(--radius-control);
+  font-size: 13px;
+}
+
+.verificacionCorrecta {
+  background: var(--primary-soft);
+  color: var(--primary-strong);
+}
+
+.verificacionError {
+  background: var(--negative-bg);
+  color: var(--negative);
+}
+
+.tablaContenedor {
+  overflow-x: auto;
+  border-top: 1px solid var(--rule);
+}
+
+.tabla {
+  width: 100%;
+  min-width: 980px;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.tabla th,
+.tabla td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+
+.tabla th {
+  background: var(--raised);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.tabla td {
+  font-size: 13px;
+}
+
+.tabla tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.tabla a {
+  color: var(--primary);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.id {
+  font-family: var(--mono);
+  font-size: 12px !important;
+}
+
+.estado,
+.vacio {
+  margin: 18px 0;
+  color: var(--muted);
+}
+
+.vacio {
+  padding: 20px;
+  text-align: center;
+}
+
+@media (max-width: 860px) {
+  .tarjetas {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .pagina {
+    padding: 22px 15px 44px;
+  }
+
+  .filtros {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+
+  .filtros button {
+    width: 100%;
+  }
+
+  .tarjetas {
+    grid-template-columns: 1fr 1fr;
+    gap: 9px;
+  }
+
+  .tarjeta {
+    min-height: 132px;
+    padding: 13px;
+  }
+
+  .tarjeta strong {
+    font-size: 24px;
+  }
+
+  .resultadoCabecera,
+  .detalleCabecera {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 380px) {
+  .tarjetas {
+    grid-template-columns: 1fr;
+  }
+}
