@@ -1,0 +1,43 @@
+# Blueprint de Render: API FastAPI y PostgreSQL (#28). Ver "Despliegue del backend" en el README.
+services:
+  - type: web
+    name: orbyte-api
+    runtime: python
+    plan: free
+    region: virginia # No se puede cambiar después de crear el servicio.
+    branch: main
+    rootDir: src/backend # Solo los cambios en esta carpeta disparan un despliegue.
+    autoDeployTrigger: commit
+    buildCommand: pip install -r requirements.txt
+    # El plan gratuito no permite preDeployCommand. Si una migración falla, el servicio no arranca.
+    startCommand: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.14.10"
+      - key: ENTORNO
+        value: produccion
+      - key: DATABASE_URL
+        fromDatabase:
+          name: orbyte-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_MIN
+        value: "60"
+      # sync: false: Render los pide al crear el Blueprint y nunca se guardan en el repositorio.
+      - key: CORS_ORIGINS
+        sync: false
+      - key: DEFAULT_ADMIN_EMAIL
+        sync: false
+      - key: DEFAULT_ADMIN_PASSWORD
+        sync: false
+
+databases:
+  - name: orbyte-db
+    databaseName: orbyte
+    plan: free
+    region: virginia # La misma región de la API, para usar la red privada.
+    # Sin ipAllowList: las IP se administran en el panel (Access Control), para no publicarlas en este repositorio.
+    # Una base existente conserva sus reglas. La base ya se creó con todas las conexiones externas bloqueadas.
+    # Si se recrea desde este archivo, Render permite todas las IP: hay que restringirlas en el panel.

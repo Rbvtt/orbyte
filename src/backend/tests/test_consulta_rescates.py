@@ -348,6 +348,29 @@ def test_voluntario_entrega_y_organizacion_confirma_recepcion(api_client, consul
     assert consulta_data.asignado.personas_beneficiadas == 12
 
 
+def test_organizacion_confirma_recepcion_con_cantidad_estimada(api_client, consulta_data):
+    # Es lo que envía /mis-rescates cuando la organización elige "Cantidad aproximada".
+    api_client.post(
+        f"/api/v1/rescates/{consulta_data.asignado.id}/entrega-voluntario",
+        headers=_headers(consulta_data.voluntario),
+    )
+    recepcion = api_client.post(
+        f"/api/v1/rescates/{consulta_data.asignado.id}/recepcion",
+        headers=_headers(consulta_data.usuario_organizacion),
+        json={
+            "cantidad_recibida": 5,
+            "unidad_recibida": "aproximada",
+            "es_medida": False,
+            "personas_beneficiadas": 4,
+        },
+    )
+    assert recepcion.status_code == 204
+    consulta_data.db.refresh(consulta_data.asignado)
+    assert consulta_data.asignado.estado == RescateEstado.ENTREGADO
+    assert consulta_data.asignado.unidad_recibida == "aproximada"
+    assert consulta_data.asignado.es_medida is False
+
+
 def test_organizacion_no_confirma_antes_de_entrega_voluntario(api_client, consulta_data):
     response = api_client.post(
         f"/api/v1/rescates/{consulta_data.asignado.id}/recepcion",

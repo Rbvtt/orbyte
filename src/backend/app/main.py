@@ -12,6 +12,7 @@ from app.config import get_settings
 from app.database import SessionLocal
 from app.routers.auth import admin_router, fundacion_router, router as auth_router
 from app.routers.catalogos import router as catalogos_router
+from app.routers.impacto import router as impacto_router
 from app.routers.rescates import router as rescates_router
 from app.services.bootstrap import ensure_seed_admin
 from app.services.rescates import FieldValidationError
@@ -25,7 +26,7 @@ app = FastAPI(title="Red de Rescate de Alimentos")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
-    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
+    allow_origin_regex=settings.cors_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -35,6 +36,7 @@ app.include_router(auth_router)
 app.include_router(admin_router)
 app.include_router(fundacion_router)
 app.include_router(catalogos_router)
+app.include_router(impacto_router)
 app.include_router(rescates_router)
 
 
