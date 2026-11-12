@@ -8,6 +8,8 @@ from app.deps import CurrentUser, require_role
 from app.schemas.rescates import (
     RescateAsignacionIn,
     RescateAsignacionOut,
+    RescateBeneficiadosIn,
+    RescateBeneficiadosOut,
     RescateComercioOut,
     RescateCreate,
     RescateDetalleOut,
@@ -30,6 +32,7 @@ from app.services.rescates import (
     RescateNoEditable,
     RescateNoEncontrado,
     asignar_rescate_con_historial,
+    actualizar_personas_beneficiadas,
     cancelar_aviso_comercio,
     confirmar_recepcion_organizacion,
     crear_rescate,
@@ -199,6 +202,37 @@ def post_entrega_organizacion(
             detail="El rescate no está recogido o ya fue entregado",
         ) from None
     return RescateEntregaOut.model_validate(rescate)
+
+
+@router.patch(
+    "/{rescate_id}/beneficiados",
+    response_model=RescateBeneficiadosOut,
+)
+def patch_personas_beneficiadas(
+    rescate_id: UUID,
+    datos: RescateBeneficiadosIn,
+    current_user: CurrentUser = Depends(require_role("organizacion")),
+    db: Session = Depends(get_db),
+) -> RescateBeneficiadosOut:
+    if current_user.usuario_id is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="No autorizado")
+    try:
+        rescate = actualizar_personas_beneficiadas(
+            db, rescate_id, current_user.usuario_id, datos.personas_beneficiadas
+        )
+    except OrganizacionNoAutorizada:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tu organización no es el destino de este rescate",
+        ) from None
+    except RescateNoEncontrado:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="El rescate no existe") from None
+    except ConflictoEstadoRescate:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Solo puedes registrar beneficiados para un rescate entregado",
+        ) from None
+    return RescateBeneficiadosOut.model_validate(rescate)
 
 
 @router.get(

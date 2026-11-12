@@ -17,7 +17,11 @@ from app.models import (
     Usuario,
     UsuarioRol,
 )
-from app.schemas.rescates import RescateEntregaIn, RescateRecepcionIn
+from app.schemas.rescates import (
+    RescateBeneficiadosIn,
+    RescateEntregaIn,
+    RescateRecepcionIn,
+)
 from app.security import create_access_token
 
 
@@ -93,6 +97,17 @@ def test_recepcion_legacy_normaliza_aproximada_a_valor_de_base_de_datos():
     )
 
     assert payload.unidad_recibida == "aprox"
+
+
+@pytest.mark.parametrize("cantidad", [0, 3, 250])
+def test_contrato_beneficiados_acepta_enteros_no_negativos(cantidad):
+    assert RescateBeneficiadosIn(personas_beneficiadas=cantidad).personas_beneficiadas == cantidad
+
+
+@pytest.mark.parametrize("cantidad", [-1, 1.5, "12"])
+def test_contrato_beneficiados_rechaza_valores_que_no_son_enteros_no_negativos(cantidad):
+    with pytest.raises(ValueError):
+        RescateBeneficiadosIn(personas_beneficiadas=cantidad)
 
 
 @pytest.mark.parametrize("rol", [UsuarioRol.VOLUNTARIO, UsuarioRol.ORGANIZACION])

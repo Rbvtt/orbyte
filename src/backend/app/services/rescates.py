@@ -655,6 +655,59 @@ def confirmar_recepcion_organizacion(
         raise
 
 
+def actualizar_personas_beneficiadas(
+    db: Session,
+    rescate_id: UUID,
+    usuario_id: UUID,
+    personas_beneficiadas: int,
+) -> Rescate:
+    organizacion_id = db.scalar(
+        select(Usuario.organizacion_id).where(Usuario.id == usuario_id)
+    )
+    if organizacion_id is None:
+        db.rollback()
+        raise OrganizacionNoAutorizada
+
+    rescate = db.scalar(
+        select(Rescate).where(Rescate.id == rescate_id).with_for_update()
+    )
+    if rescate is None:
+        db.rollback()
+        raise RescateNoEncontrado
+    if rescate.organizacion_id != organizacion_id:
+        db.rollback()
+        raise OrganizacionNoAutorizada
+    if rescate.estado != RescateEstado.ENTREGADO:
+        db.rollback()
+        raise ConflictoEstadoRescate
+
+    anterior = rescate.personas_beneficiadas
+    if anterior == personas_beneficiadas:
+        return rescate
+
+    try:
+        rescate.personas_beneficiadas = personas_beneficiadas
+        db.add(
+            RescateHistorial(
+                rescate_id=rescate_id,
+                estado_anterior=RescateEstado.ENTREGADO,
+                estado_nuevo=RescateEstado.ENTREGADO,
+                cambiado_por=usuario_id,
+                detalle={
+                    "accion": "personas_beneficiadas_actualizadas",
+                    "personas_beneficiadas_anterior": anterior,
+                    "personas_beneficiadas": personas_beneficiadas,
+                },
+            )
+        )
+        db.commit()
+        db.refresh(rescate)
+        return rescate
+    except Exception:
+        db.rollback()
+        raise
+
+
 def obtener_detalle_rescate(
     db: Session, rescate_id: UUID, usuario: CurrentUser
 ) -> dict | None:

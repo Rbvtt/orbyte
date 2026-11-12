@@ -426,6 +426,77 @@ def test_entrega_acepta_unidad_aproximada_y_guarda_valor_canonico(
     assert consulta_data.recogido.unidad_recibida == "aprox"
 
 
+def test_patch_beneficiados_registra_conteo_y_conserva_correccion_en_historial(
+    api_client, consulta_data
+):
+    endpoint = f"/api/v1/rescates/{consulta_data.entregado.id}/beneficiados"
+    headers = _headers(consulta_data.usuario_organizacion)
+
+    primera = api_client.patch(
+        endpoint,
+        headers=headers,
+        json={"personas_beneficiadas": 12},
+    )
+    assert primera.status_code == 200
+    assert primera.json()["personas_beneficiadas"] == 12
+
+    correccion = api_client.patch(
+        endpoint,
+        headers=headers,
+        json={"personas_beneficiadas": 9},
+    )
+    assert correccion.status_code == 200
+    assert correccion.json()["personas_beneficiadas"] == 9
+
+    consulta_data.db.refresh(consulta_data.entregado)
+    assert consulta_data.entregado.personas_beneficiadas == 9
+    historial = api_client.get(
+        f"/api/v1/rescates/{consulta_data.entregado.id}/historial",
+        headers=_headers(consulta_data.fundacion),
+    )
+    eventos = [
+        item
+        for item in historial.json()
+        if item["detalle"].get("accion") == "personas_beneficiadas_actualizadas"
+    ]
+    assert [item["detalle"] for item in eventos] == [
+        {
+            "accion": "personas_beneficiadas_actualizadas",
+            "personas_beneficiadas_anterior": None,
+            "personas_beneficiadas": 12,
+        },
+        {
+            "accion": "personas_beneficiadas_actualizadas",
+            "personas_beneficiadas_anterior": 12,
+            "personas_beneficiadas": 9,
+        },
+    ]
+    assert all(
+        item["estado_anterior"] == item["estado_nuevo"] == RescateEstado.ENTREGADO.value
+        for item in eventos
+    )
+
+
+def test_patch_beneficiados_restringe_organizacion_y_estado(
+    api_client, consulta_data
+):
+    ajeno = api_client.patch(
+        f"/api/v1/rescates/{consulta_data.entregado.id}/beneficiados",
+        headers=_headers(consulta_data.usuario_otra_organizacion),
+        json={"personas_beneficiadas": 12},
+    )
+    no_entregado = api_client.patch(
+        f"/api/v1/rescates/{consulta_data.recogido.id}/beneficiados",
+        headers=_headers(consulta_data.usuario_organizacion),
+        json={"personas_beneficiadas": 12},
+    )
+
+    assert ajeno.status_code == 403
+    assert no_entregado.status_code == 409
+    consulta_data.db.refresh(consulta_data.entregado)
+    assert consulta_data.entregado.personas_beneficiadas is None
+
+
 def test_entrega_de_organizacion_distinta_responde_403_sin_cambios(
     api_client, consulta_data
 ):
