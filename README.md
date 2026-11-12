@@ -222,7 +222,11 @@ existencia del recurso. El voluntario asignado recibe los cuatro datos del
 traslado: `lugar_recogida`, `hora_limite`, `cantidad_aprox` y
 `lugar_entrega`, derivado de `organizaciones_receptoras.direccion`. Los
 campos devueltos se filtran según el rol y nunca incluyen credenciales,
-tokens ni hashes.
+tokens ni hashes. La organización destino también recibe la referencia del
+alimento y, después de la entrega, la cantidad reportada, su unidad, si fue
+medida o estimada, quién la recibió, la fecha y hora y el total de personas
+beneficiadas. Estos datos se muestran en `/organizacion/recepcion/{id}` y solo
+se exponen a la organización asignada.
 
 `POST /api/v1/rescates/{id}/no-completado` permite únicamente a `fundacion`
 cerrar un rescate en estado `disponible` o `asignado`. Recibe un body

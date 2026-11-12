@@ -58,6 +58,30 @@ export interface RescateDetalle {
   origen_aviso?: "comercio" | "fundacion";
   /** Solo se entrega a fundación cuando el rescate quedó como no completado. */
   motivo_no_completado?: string;
+  recibido_por_nombre?: string | null;
+  cantidad_recibida?: number | null;
+  unidad_recibida?: "kg" | "aprox" | null;
+  es_medida?: boolean | null;
+  personas_beneficiadas?: number | null;
+  entregado_en?: string | null;
+}
+
+export interface RescateEntrega {
+  id: string;
+  estado: EstadoRescate;
+  organizacion_id: string;
+  recibido_por: string;
+  cantidad_recibida: number;
+  unidad: "kg" | "aprox";
+  es_medida: boolean;
+  entregado_en: string;
+  personas_beneficiadas: number | null;
+}
+
+export interface RescateBeneficiados {
+  id: string;
+  estado: EstadoRescate;
+  personas_beneficiadas: number;
 }
 
 export interface RescateHistorial {

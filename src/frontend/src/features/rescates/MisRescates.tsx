@@ -20,10 +20,6 @@ export function MisRescates() {
   const [rescates, setRescates] = useState<RescateLista[] | null>(null);
   const [error, setError] = useState("");
   const [rol, setRol] = useState<RolUsuario | null>(null);
-  const [recepcionId, setRecepcionId] = useState<string | null>(null);
-  const [cantidad, setCantidad] = useState("");
-  const [esMedida, setEsMedida] = useState(true);
-  const [personas, setPersonas] = useState("");
   const [accion, setAccion] = useState("");
 
   useEffect(() => {
@@ -99,37 +95,6 @@ export function MisRescates() {
     }
   }
 
-  async function confirmarRecepcion(id: string) {
-    const cantidadRecibida = Number(cantidad);
-    const beneficiarios = personas === "" ? undefined : Number(personas);
-    if (!Number.isFinite(cantidadRecibida) || cantidadRecibida <= 0) {
-      setError("Ingresa una cantidad recibida mayor que cero.");
-      return;
-    }
-    if (beneficiarios !== undefined && (!Number.isInteger(beneficiarios) || beneficiarios < 0)) {
-      setError("La cantidad de personas beneficiadas debe ser un número entero igual o mayor que cero.");
-      return;
-    }
-    setAccion(id);
-    setError("");
-    try {
-      await rescatesApi.confirmarRecepcion(id, {
-        cantidad_recibida: cantidadRecibida,
-        unidad_recibida: esMedida ? "kg" : "aproximada",
-        es_medida: esMedida,
-        ...(beneficiarios !== undefined ? { personas_beneficiadas: beneficiarios } : {}),
-      });
-      setRecepcionId(null);
-      setCantidad("");
-      setPersonas("");
-      await recargar();
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "No se pudo confirmar la recepción.");
-    } finally {
-      setAccion("");
-    }
-  }
-
   return (
     <main className={styles.pagina}>
       <div className={styles.contenido}>
@@ -187,38 +152,13 @@ export function MisRescates() {
                     {accion === rescate.id ? "Guardando…" : "Marcar donación entregada"}
                   </button>
                 )}
-                {rol === "organizacion" && rescate.estado === "recogido" && recepcionId !== rescate.id && (
-                  <button className={styles.accion} type="button" onClick={() => setRecepcionId(rescate.id)}>
-                    Confirmar recepción
-                  </button>
+                {rol === "organizacion" && rescate.estado === "recogido" && (
+                  <Link className={styles.detalle} href={`/organizacion/recepcion/${rescate.id}`}>
+                    Confirmar recepción <span aria-hidden="true">→</span>
+                  </Link>
                 )}
                 {rol === "organizacion" && rescate.estado === "asignado" && (
                   <p className={styles.espera}>El voluntario aún no ha marcado la donación como entregada.</p>
-                )}
-                {rol === "organizacion" && recepcionId === rescate.id && (
-                  <form className={styles.formulario} onSubmit={(event) => { event.preventDefault(); void confirmarRecepcion(rescate.id); }}>
-                    <label>
-                      Cantidad recibida
-                      <input type="number" min="0.01" step="0.01" required value={cantidad} onChange={(event) => setCantidad(event.target.value)} />
-                    </label>
-                    <label>
-                      Tipo de cantidad
-                      <select value={esMedida ? "medida" : "aproximada"} onChange={(event) => setEsMedida(event.target.value === "medida")}>
-                        <option value="medida">Medida en kilogramos</option>
-                        <option value="aproximada">Cantidad aproximada</option>
-                      </select>
-                    </label>
-                    <label>
-                      Personas beneficiadas (opcional)
-                      <input type="number" min="0" step="1" value={personas} onChange={(event) => setPersonas(event.target.value)} />
-                    </label>
-                    <div className={styles.formularioAcciones}>
-                      <button className={styles.accion} type="submit" disabled={accion === rescate.id}>
-                        {accion === rescate.id ? "Guardando…" : "Marcar como recibido"}
-                      </button>
-                      <button className={styles.cancelar} type="button" onClick={() => setRecepcionId(null)}>Cancelar</button>
-                    </div>
-                  </form>
                 )}
                 <Link className={styles.detalle} href={`/rescates/${rescate.id}`}>Ver detalles <span aria-hidden="true">→</span></Link>
               </article>

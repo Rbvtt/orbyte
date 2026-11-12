@@ -1,0 +1,271 @@
+.pagina {
+  width: min(940px, 100%);
+  margin: 0 auto;
+  padding: 28px 24px 56px;
+}
+
+.volver {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  margin-bottom: 12px;
+  color: var(--primary);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.encabezado {
+  margin-bottom: 18px;
+}
+
+.kicker {
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.encabezado h1 {
+  margin: 5px 0;
+  color: var(--primary-strong);
+  font-size: clamp(24px, 4vw, 32px);
+  line-height: 1.2;
+}
+
+.encabezado p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.panel {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: 0 8px 26px rgb(34 61 43 / 4%);
+}
+
+.resumenRescate {
+  margin: 20px;
+  padding: 18px;
+  border-radius: var(--radius-control);
+  background: #f3f1e7;
+  color: #27382c;
+}
+
+.resumenRescate h2,
+.tarjeta h2 {
+  margin: 0 0 10px;
+  font-size: 16px;
+}
+
+.resumenRescate p,
+.tarjeta p {
+  margin: 5px 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.estado {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  margin-top: 10px;
+  padding: 0 11px;
+  border-radius: var(--radius-chip);
+  background: var(--recogido-bg);
+  color: var(--recogido-ink);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.campos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  padding: 0 20px 20px;
+}
+
+.ayuda {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.opciones {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.opciones legend {
+  margin-bottom: 7px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.opciones label {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--raised);
+  font-size: 13px;
+  line-height: 1.35;
+  cursor: pointer;
+}
+
+.opciones input {
+  accent-color: var(--primary);
+}
+
+.formularioPie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--rule);
+}
+
+.formularioPie p,
+.pie p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.confirmacion {
+  display: grid;
+  justify-items: center;
+  margin: 18px 0 24px;
+  text-align: center;
+}
+
+.confirmacionIcono {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 26px;
+}
+
+.confirmacion h1 {
+  margin: 12px 0 3px;
+  color: var(--primary-strong);
+  font-size: clamp(24px, 4vw, 30px);
+}
+
+.confirmacion p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.resumen {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(220px, 0.9fr);
+  gap: 16px;
+}
+
+.datos {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 8px 20px;
+}
+
+.datos div {
+  display: grid;
+  grid-template-columns: minmax(140px, 0.8fr) minmax(0, 1.2fr);
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.datos div:last-child {
+  border-bottom: 0;
+}
+
+.datos dt {
+  color: var(--muted);
+}
+
+.datos dd {
+  margin: 0;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.tarjeta {
+  align-self: start;
+  padding: 18px;
+  border-radius: var(--radius-control);
+  background: #f3f1e7;
+}
+
+.pie {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  margin-top: 22px;
+  text-align: center;
+}
+
+.pie button {
+  min-width: 180px;
+}
+
+@media (max-width: 640px) {
+  .pagina {
+    padding: 20px 15px 40px;
+  }
+
+  .campos,
+  .resumen {
+    grid-template-columns: 1fr;
+  }
+
+  .campos {
+    gap: 18px;
+    padding: 0 16px 17px;
+  }
+
+  .resumenRescate {
+    margin: 16px 16px 18px;
+    padding: 15px;
+  }
+
+  .opciones {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .formularioPie {
+    align-items: stretch;
+    padding: 14px 16px;
+  }
+
+  .formularioPie .btn {
+    width: 100%;
+  }
+
+  .datos {
+    padding: 5px 16px;
+  }
+
+  .datos div {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+}

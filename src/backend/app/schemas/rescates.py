@@ -272,3 +272,9 @@ class RescateDetalleOut(BaseModel):
     observaciones: str | None = None
     origen_aviso: str | None = None
     motivo_no_completado: str | None = None
+    recibido_por_nombre: str | None = None
+    cantidad_recibida: float | None = None
+    unidad_recibida: str | None = None
+    es_medida: bool | None = None
+    personas_beneficiadas: int | None = None
+    entregado_en: datetime | None = None
