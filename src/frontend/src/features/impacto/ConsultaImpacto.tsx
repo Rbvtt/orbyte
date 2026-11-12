@@ -15,6 +15,7 @@ import {
 import { impactoApi } from "@/services/api/impacto";
 import type { ImpactoResumen, MetricaImpacto } from "@/types/impacto";
 import { consultaPeriodo, leerPeriodo, type Periodo, periodoPorDefecto, textoPeriodo } from "./periodo";
+import { esPeriodoSinEntregas, ImpactoVacio } from "./ImpactoVacio";
 import { useSoloFundacion } from "./useSoloFundacion";
 import styles from "./ConsultaImpacto.module.css";
 
@@ -26,6 +27,7 @@ import styles from "./ConsultaImpacto.module.css";
  */
 
 const numero = new Intl.NumberFormat("es-CO", { maximumFractionDigits: 2 });
+const CAMPO_INICIO = "impacto-desde";
 
 const TOTALES: {
   metrica: MetricaImpacto;
@@ -87,6 +89,7 @@ function FormularioPeriodo({ periodo, onConsultar }: { periodo: Periodo; onConsu
         <label className="field">
           <span className="field__label">Fecha de inicio</span>
           <input
+            id={CAMPO_INICIO}
             className="input"
             type="date"
             value={desde}
@@ -162,6 +165,7 @@ export function ConsultaImpacto() {
 
   const actual = resultado?.clave === clave ? resultado : null;
   const resumen = actual?.resumen ?? null;
+  const sinEntregas = resumen ? esPeriodoSinEntregas(resumen) : false;
 
   return (
     <main className={styles.pagina}>
@@ -244,7 +248,10 @@ export function ConsultaImpacto() {
         </div>
       )}
 
-      {resumen && (
+      {/* #21 · CA-05.3: periodo sin entregas → totales en cero y mensaje con el rango consultado. */}
+      {sinEntregas && <ImpactoVacio periodo={periodo} campoInicio={CAMPO_INICIO} />}
+
+      {resumen && !sinEntregas && (
         <section className={`panel ${styles.lectura}`} aria-labelledby="lectura-titulo">
           <h2 id="lectura-titulo">Cómo leer este impacto</h2>
           <dl>
