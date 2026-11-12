@@ -441,10 +441,17 @@ incluyendo ambas fechas. Solo cuenta rescates entregados. Devuelve `kg_total`,
 devuelve el total de la métrica y los rescates que lo respaldan. Los detalles
 incluyen fecha de entrega, comercio, organización, cantidad recibida, tipo de
 medición y beneficiarios. Para `organizaciones`, los rescates se agrupan por
-organización. Ambas rutas rechazan periodos invertidos con `422`. La pantalla
-de la fundación está en `/fundacion/impacto`; permite seleccionar cada
-indicador, revisar sus rescates, comprobar que el respaldo suma el total y
-abrir el historial de cada rescate.
+organización. Ambas rutas rechazan periodos invertidos con `422`.
+
+La fundación consulta el impacto en `/fundacion/impacto` (#52, diseño #19):
+elige la fecha de inicio y de fin (por defecto, el mes en curso), ve los tres
+totales del periodo (kilogramos, personas beneficiadas y organizaciones
+receptoras) y cada total enlaza a su detalle en
+`/fundacion/impacto/detalle?metrica=…&desde=…&hasta=…` (#22), que lista los
+rescates que lo componen, comprueba que su suma coincide con el total y enlaza
+al historial de cada rescate. El periodo queda en la URL, así que «Volver al
+resumen» regresa al mismo periodo. Si hay entregas con cantidad estimada, un
+aviso indica cuántas son y que no se suman a los kilogramos.
 
 Los datos de personas beneficiadas corresponden únicamente a `fundacion` y a la `organizacion` destino (RNF-005). Los endpoints que los expongan usarán `ROLES_VE_BENEFICIARIOS`.
 
