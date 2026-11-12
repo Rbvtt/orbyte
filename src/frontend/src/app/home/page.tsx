@@ -66,6 +66,13 @@ const VISTAS: Record<RolUsuario, VistaRol> = {
         etiqueta: "Operación",
       },
       {
+        titulo: "Consultar impacto",
+        descripcion: "Revisa las cifras del periodo y consulta los rescates que las respaldan.",
+        href: "/fundacion/impacto",
+        icono: IconoBalanza,
+        etiqueta: "Reportes",
+      },
+      {
         titulo: "Registrar un aviso",
         descripcion: "Registra una donación recibida por llamada u otro medio.",
         href: "/aviso/nuevo",
