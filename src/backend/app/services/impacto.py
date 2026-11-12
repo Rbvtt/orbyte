@@ -31,6 +31,25 @@ CONSULTA_IMPACTO = text(
     """
 )
 
+CONSULTA_ORGANIZACIONES = text(
+    """
+    SELECT DISTINCT o.id, o.nombre
+    FROM rescates r
+    JOIN organizaciones_receptoras o ON o.id = r.organizacion_id
+    WHERE r.estado = 'entregado'
+      AND r.entregado_en >= :desde
+      AND r.entregado_en < :hasta
+    ORDER BY o.nombre, o.id
+    """
+)
+
+_FILTROS_DETALLE = {
+    "kg": "r.unidad_recibida = 'kg'",
+    "personas": "r.personas_beneficiadas IS NOT NULL",
+    "organizaciones": "TRUE",
+    "sin_kg": "r.es_medida IS NOT TRUE",
+}
+
 
 @dataclass(frozen=True)
 class TotalesImpacto:
@@ -69,3 +88,49 @@ def calcular_impacto(db: Session, desde: datetime, hasta: datetime) -> TotalesIm
         rescates_entregados=int(fila.rescates_entregados),
         rescates_estimados=int(fila.rescates_estimados),
     )
+
+
+def listar_organizaciones_impacto(
+    db: Session, desde: datetime, hasta: datetime
+) -> list[dict]:
+    filas = db.execute(
+        CONSULTA_ORGANIZACIONES, {"desde": desde, "hasta": hasta}
+    ).mappings()
+    return [{"id": fila["id"], "nombre": fila["nombre"]} for fila in filas]
+
+
+def listar_rescates_detalle_impacto(
+    db: Session, desde: datetime, hasta: datetime, metrica: str
+) -> list[dict]:
+    filtro = _FILTROS_DETALLE.get(metrica)
+    if filtro is None:
+        raise ValueError("Métrica de impacto no válida")
+
+    consulta = text(
+        f"""
+        SELECT
+            r.id,
+            r.entregado_en,
+            c.nombre AS comercio,
+            o.id AS organizacion_id,
+            o.nombre AS organizacion,
+            r.cantidad_recibida,
+            r.unidad_recibida,
+            r.es_medida,
+            r.personas_beneficiadas
+        FROM rescates r
+        JOIN comercios c ON c.id = r.comercio_id
+        JOIN organizaciones_receptoras o ON o.id = r.organizacion_id
+        WHERE r.estado = 'entregado'
+          AND r.entregado_en >= :desde
+          AND r.entregado_en < :hasta
+          AND {filtro}
+        ORDER BY r.entregado_en, r.id
+        """
+    )
+    return [
+        dict(fila)
+        for fila in db.execute(
+            consulta, {"desde": desde, "hasta": hasta}
+        ).mappings()
+    ]
