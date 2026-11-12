@@ -475,6 +475,11 @@ al historial de cada rescate. El periodo queda en la URL, así que «Volver al
 resumen» regresa al mismo periodo. Si hay entregas con cantidad estimada, un
 aviso indica cuántas son y que no se suman a los kilogramos.
 
+Si el periodo no tiene entregas (#21 · CA-05.3), los tres totales muestran `0`
+y la vista lo dice con el rango consultado, por ejemplo «Del 1 al 31 de agosto
+de 2026 no hay rescates entregados», con un acceso para cambiar las fechas; no
+hay errores ni pantalla en blanco.
+
 Los datos de personas beneficiadas corresponden únicamente a `fundacion` y a la `organizacion` destino (RNF-005). Los endpoints que los expongan usarán `ROLES_VE_BENEFICIARIOS`.
 
 La relación entre un usuario comercio y `comercios` se almacena en
