@@ -37,6 +37,7 @@ export default function AsignarRescatePage() {
   const [voluntarios, setVoluntarios] = useState<Voluntario[]>([]);
   const [organizacionId, setOrganizacionId] = useState("");
   const [voluntarioId, setVoluntarioId] = useState("");
+  const [motivo, setMotivo] = useState("");
   const [cargando, setCargando] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState("");
@@ -111,7 +112,11 @@ export default function AsignarRescatePage() {
         organizacion_id: organizacionId,
         voluntario_id: voluntarioId,
       };
-      await rescatesApi.asignar(id, datos);
+      if (rescate?.estado === "asignado") {
+        await rescatesApi.reasignar(id, { ...datos, motivo: motivo.trim() });
+      } else {
+        await rescatesApi.asignar(id, datos);
+      }
       router.push(`/rescates/${id}`);
     } catch (reason) {
       if (reason instanceof ApiError && reason.status === 409) {
@@ -126,8 +131,9 @@ export default function AsignarRescatePage() {
     }
   }
 
+  const reasignando = rescate?.estado === "asignado";
   const vencido = rescate?.hora_limite ? Date.parse(rescate.hora_limite) <= ahora.getTime() : false;
-  const estadoValido = rescate?.estado === "disponible";
+  const estadoValido = rescate?.estado === "disponible" || reasignando;
 
   if (cargando) {
     return <main className={styles.pagina}><p className={styles.estado}>Cargando rescate…</p></main>;
@@ -139,7 +145,7 @@ export default function AsignarRescatePage() {
         <Link href="/fundacion/rescates" className={styles.volver}>← Volver a rescates</Link>
         <section className={styles.tarjeta}>
           <span className={styles.kicker}>Coordinación de rescates</span>
-          <h1>Asignar rescate</h1>
+          <h1>{reasignando ? "Reasignar rescate" : "Asignar rescate"}</h1>
           <p className={styles.descripcion}>
             {reasignando
               ? "Selecciona la organización y el nuevo voluntario. El motivo quedará guardado en el historial."
@@ -158,7 +164,7 @@ export default function AsignarRescatePage() {
             <p className={styles.estado}>No se encontró el rescate.</p>
           ) : !estadoValido || vencido ? (
             <div className={styles.aviso} role="status">
-              Este rescate ya no está disponible para asignación.
+              Este rescate ya no está disponible para asignación o reasignación.
               <Link href={`/rescates/${id}`}>Consultar detalle</Link>
             </div>
           ) : (
@@ -230,6 +236,19 @@ export default function AsignarRescatePage() {
                   </select>
                 </label>
 
+                {reasignando && (
+                  <label>
+                    Motivo de reasignación
+                    <textarea
+                      value={motivo}
+                      onChange={(event) => setMotivo(event.target.value)}
+                      placeholder="Explica por qué se cambia la asignación"
+                      minLength={3}
+                      required
+                    />
+                  </label>
+                )}
+
                 {organizaciones.length === 0 && (
                   <p className={styles.aviso}>No hay organizaciones activas disponibles para asignar.</p>
                 )}
@@ -238,7 +257,7 @@ export default function AsignarRescatePage() {
                 )}
 
                 <button type="submit" disabled={enviando || organizaciones.length === 0 || voluntarios.length === 0}>
-                  {enviando ? "Guardando…" : "Confirmar asignación"}
+                  {enviando ? "Guardando…" : reasignando ? "Guardar reasignación" : "Confirmar asignación"}
                 </button>
               </form>
             </>

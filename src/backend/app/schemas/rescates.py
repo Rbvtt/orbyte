@@ -204,6 +204,14 @@ class RescateEntregaOut(BaseModel):
     personas_beneficiadas: int | None
 
 
+class RescateNoCompletadoOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    estado: RescateEstado
+    motivo_no_completado: str
+
+
 class RescateBeneficiadosIn(BaseModel):
     personas_beneficiadas: int = Field(ge=0, strict=True)
 

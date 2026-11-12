@@ -43,6 +43,11 @@ export const rescatesApi = {
       `/api/v1/rescates/${id}/asignacion`,
       { method: "PATCH", body: datos },
     ),
+  reasignar: (id: string, datos: { organizacion_id: string; voluntario_id: string; motivo: string }) =>
+    apiFetch<{ id: string; estado: string; organizacion_id: string; voluntario_id: string }>(
+      `/api/v1/rescates/${id}/reasignacion`,
+      { method: "PATCH", body: datos },
+    ),
   misAvisos: (signal?: AbortSignal) =>
     apiFetch<RescateAvisoComercio[]>("/api/v1/rescates/mis-avisos", { signal }),
   actualizarAviso: (
