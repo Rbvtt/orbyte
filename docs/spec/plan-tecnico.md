@@ -74,7 +74,7 @@ Los permisos se verifican en el servidor por rol **y por pertenencia al recurso*
 | Registrar recogida | No | No | Solo el asignado, desde `asignado` | No |
 | Confirmar recepción y registrar beneficiados | No | No | No | Solo destino, desde `recogido` |
 | Cerrar como no completado | Sí, con motivo y estado permitido | No | No | No |
-| Consultar impacto global | Sí | No | No | No |
+| Consultar impacto y su detalle | Sí | No | No | No |
 
 Los beneficiados solo son visibles para fundación y organización destino. El usuario y rol proceden del token verificado y del usuario activo, no de campos de identidad enviados por el cliente. Sin autenticación: 401; rol no autorizado: 403. Los endpoints deben evitar exponer recursos ajenos y contar con pruebas de acceso cruzado. La matriz no amplía el alcance de la entrega académica, que debe confirmarse con su guía.
 
