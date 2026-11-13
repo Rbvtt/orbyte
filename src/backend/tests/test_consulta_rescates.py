@@ -349,7 +349,7 @@ def test_voluntario_entrega_y_organizacion_confirma_recepcion(api_client, consul
 
 
 def test_organizacion_confirma_recepcion_con_cantidad_estimada(api_client, consulta_data):
-    # Es lo que envía /mis-rescates cuando la organización elige "Cantidad aproximada".
+    # El endpoint antiguo acepta "aproximada" y guarda el valor canónico "aprox" (migración 0008).
     api_client.post(
         f"/api/v1/rescates/{consulta_data.asignado.id}/entrega-voluntario",
         headers=_headers(consulta_data.voluntario),
@@ -367,7 +367,7 @@ def test_organizacion_confirma_recepcion_con_cantidad_estimada(api_client, consu
     assert recepcion.status_code == 204
     consulta_data.db.refresh(consulta_data.asignado)
     assert consulta_data.asignado.estado == RescateEstado.ENTREGADO
-    assert consulta_data.asignado.unidad_recibida == "aproximada"
+    assert consulta_data.asignado.unidad_recibida == "aprox"
     assert consulta_data.asignado.es_medida is False
 
 
@@ -447,6 +447,36 @@ def test_entrega_acepta_unidad_aproximada_y_guarda_valor_canonico(
     assert response.json()["unidad"] == "aprox"
     consulta_data.db.refresh(consulta_data.recogido)
     assert consulta_data.recogido.unidad_recibida == "aprox"
+
+
+def test_entrega_estimada_aparece_en_el_detalle_de_impacto(api_client, consulta_data):
+    entrega = api_client.post(
+        f"/api/v1/rescates/{consulta_data.recogido.id}/entrega",
+        headers=_headers(consulta_data.usuario_organizacion),
+        json={
+            "recibido_por": str(consulta_data.usuario_organizacion.id),
+            "cantidad_recibida": 6,
+            "unidad": "aprox",
+            "es_medida": False,
+            "personas_beneficiadas": 3,
+        },
+    )
+    assert entrega.status_code == 200
+
+    hoy = datetime.now(timezone.utc).date()
+    detalle = api_client.get(
+        "/api/v1/impacto/detalle",
+        headers=_headers(consulta_data.fundacion),
+        params={
+            "metrica": "sin_kg",
+            "desde": (hoy - timedelta(days=1)).isoformat(),
+            "hasta": (hoy + timedelta(days=1)).isoformat(),
+        },
+    )
+    assert detalle.status_code == 200
+    rescates = detalle.json()["rescates"]
+    assert [r["id"] for r in rescates] == [str(consulta_data.recogido.id)]
+    assert rescates[0]["unidad_recibida"] == "aprox"
 
 
 def test_patch_beneficiados_registra_conteo_y_conserva_correccion_en_historial(

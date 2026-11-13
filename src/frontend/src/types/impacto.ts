@@ -12,7 +12,7 @@ export interface RescateImpactoDetalle {
   organizacion_id: string;
   organizacion: string;
   cantidad_recibida: number;
-  unidad_recibida: "kg" | "aproximada";
+  unidad_recibida: "kg" | "aprox";
   es_medida: boolean;
   personas_beneficiadas: number | null;
   valor: number | null;
