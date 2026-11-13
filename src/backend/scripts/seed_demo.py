@@ -206,6 +206,7 @@ def _cargar(db, contrasena: str) -> dict[str, int]:
         voluntario_id = VOLUNTARIOS[demo.voluntario][0] if demo.voluntario else None
         receptor = usuarios_organizacion[demo.organizacion] if demo.organizacion else None
 
+        # Mismo formato de detalle que escribe la app en cada transición (app/services/rescates.py).
         # Momentos de cada transición, siempre entre la creación y la hora límite.
         paso = (limite - creado) / 4 if limite > creado else timedelta(minutes=30)
         asignado_en = creado + paso
@@ -224,19 +225,18 @@ def _cargar(db, contrasena: str) -> dict[str, int]:
             registrado_por=registrado_por.id,
             creado_en=creado,
         )
-        historial = [(None, RescateEstado.DISPONIBLE, registrado_por.id, creado, {"accion": "registro"})]
+        historial = [(None, RescateEstado.DISPONIBLE, registrado_por.id, creado, {})]
 
         if demo.organizacion and demo.estado != RescateEstado.DISPONIBLE:
             rescate.organizacion_id = organizacion.id
             rescate.voluntario_id = voluntario_id
             rescate.asignado_en = asignado_en
             rescate.asignado_por = fundacion.id
-            historial.append((RescateEstado.DISPONIBLE, RescateEstado.ASIGNADO, fundacion.id, asignado_en,
-                              {"organizacion_id": str(organizacion.id), "voluntario_id": str(voluntario_id)}))
+            historial.append((RescateEstado.DISPONIBLE, RescateEstado.ASIGNADO, fundacion.id, asignado_en, {}))
         if demo.estado in (RescateEstado.RECOGIDO, RescateEstado.ENTREGADO):
             rescate.recogido_en = recogido_en
             historial.append((RescateEstado.ASIGNADO, RescateEstado.RECOGIDO, voluntario_id, recogido_en,
-                              {"accion": "entrega_voluntario"}))
+                              {"accion": "entrega_confirmada_por_voluntario"}))
         if demo.estado == RescateEstado.ENTREGADO:
             cantidad, unidad, personas = demo.recibido
             rescate.entregado_en = entregado_en
@@ -252,9 +252,11 @@ def _cargar(db, contrasena: str) -> dict[str, int]:
         if demo.estado == RescateEstado.NO_COMPLETADO:
             rescate.motivo_no_completado = demo.motivo
             anterior = RescateEstado.ASIGNADO if demo.organizacion else RescateEstado.DISPONIBLE
-            actor = registrado_por.id if demo.motivo == "Cancelado por el comercio" else fundacion.id
+            cancelado = demo.motivo == "Cancelado por el comercio"
+            actor = registrado_por.id if cancelado else fundacion.id
+            accion = "cancelacion_comercio" if cancelado else "marcado_no_completado"
             historial.append((anterior, RescateEstado.NO_COMPLETADO, actor, asignado_en + paso,
-                              {"motivo": demo.motivo}))
+                              {"accion": accion, "motivo": demo.motivo}))
 
         db.add(rescate)
         db.flush()
