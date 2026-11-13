@@ -512,6 +512,24 @@ python -m scripts.seed_dev_usuarios
 
 Los tests que necesitan PostgreSQL se ejecutan únicamente si se define `TEST_DATABASE_URL` (por ejemplo, en `.env`); si no está definida, pytest los marca como omitidos. SQLite no es compatible con el esquema PostgreSQL.
 
+### Datos del Demo
+
+`scripts/seed_demo.py` (#26) carga datos ficticios para recorrer CMP-01 a CMP-05:
+
+- 3 comercios.
+- Las organizaciones y los voluntarios de `docs/datos/cmp02/`.
+- Una cuenta por rol con correo `demo-<rol>@example.com`: `demo-fundacion`, `demo-comercio-panaderia`, `demo-organizacion-a`, `demo-voluntario-a`, etc.
+- 15 rescates en los 5 estados, con historial coherente. Las entregas caen en dos periodos (hace unos 30 días y en la última semana), así que la consulta de impacto muestra cifras distintas por mes.
+
+Es idempotente: si se vuelve a ejecutar, no duplica ni sobrescribe. Desde `src/backend`, con el entorno virtual activo y las migraciones aplicadas:
+
+```powershell
+$env:SEED_DEMO_PASSWORD = "<clave-de-las-cuentas-demo>"
+python -m scripts.seed_demo
+```
+
+Con `ENTORNO=produccion` exige además `--produccion`. Ojo: `historial_estados` es de solo inserción, así que estos rescates no se pueden borrar uno por uno. Para empezar la operación real sin ellos, hay que vaciar las tablas con `TRUNCATE`.
+
 ## Prototipos de experiencia de usuario
 
 ### Descripción
