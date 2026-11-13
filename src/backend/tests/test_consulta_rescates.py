@@ -386,6 +386,197 @@ def test_organizacion_no_confirma_antes_de_entrega_voluntario(api_client, consul
     assert consulta_data.asignado.estado == RescateEstado.ASIGNADO
 
 
+def test_entrega_registra_recepcion_y_historial(api_client, consulta_data):
+    recoger = api_client.post(
+        f"/api/v1/rescates/{consulta_data.asignado.id}/entrega-voluntario",
+        headers=_headers(consulta_data.voluntario),
+    )
+    assert recoger.status_code == 204
+
+    response = api_client.post(
+        f"/api/v1/rescates/{consulta_data.asignado.id}/entrega",
+        headers=_headers(consulta_data.usuario_organizacion),
+        json={
+            "recibido_por": str(consulta_data.usuario_organizacion.id),
+            "cantidad_recibida": 8.5,
+            "unidad": "kg",
+            "es_medida": True,
+            "personas_beneficiadas": 12,
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["estado"] == RescateEstado.ENTREGADO.value
+    assert body["organizacion_id"] == str(consulta_data.organizacion.id)
+    assert body["recibido_por"] == str(consulta_data.usuario_organizacion.id)
+    assert body["cantidad_recibida"] == 8.5
+    assert body["unidad"] == "kg"
+    assert body["es_medida"] is True
+    assert body["entregado_en"] is not None
+    assert body["personas_beneficiadas"] == 12
+
+    consulta_data.db.refresh(consulta_data.asignado)
+    assert consulta_data.asignado.estado == RescateEstado.ENTREGADO
+    historial = api_client.get(
+        f"/api/v1/rescates/{consulta_data.asignado.id}/historial",
+        headers=_headers(consulta_data.fundacion),
+    )
+    assert historial.status_code == 200
+    assert [(item["estado_anterior"], item["estado_nuevo"]) for item in historial.json()][-1] == (
+        RescateEstado.RECOGIDO.value,
+        RescateEstado.ENTREGADO.value,
+    )
+
+
+def test_entrega_acepta_unidad_aproximada_y_guarda_valor_canonico(
+    api_client, consulta_data
+):
+    response = api_client.post(
+        f"/api/v1/rescates/{consulta_data.recogido.id}/entrega",
+        headers=_headers(consulta_data.usuario_organizacion),
+        json={
+            "recibido_por": str(consulta_data.usuario_organizacion.id),
+            "cantidad_recibida": 8.5,
+            "unidad": "aprox",
+            "es_medida": False,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["unidad"] == "aprox"
+    consulta_data.db.refresh(consulta_data.recogido)
+    assert consulta_data.recogido.unidad_recibida == "aprox"
+
+
+def test_patch_beneficiados_registra_conteo_y_conserva_correccion_en_historial(
+    api_client, consulta_data
+):
+    endpoint = f"/api/v1/rescates/{consulta_data.entregado.id}/beneficiados"
+    headers = _headers(consulta_data.usuario_organizacion)
+
+    primera = api_client.patch(
+        endpoint,
+        headers=headers,
+        json={"personas_beneficiadas": 12},
+    )
+    assert primera.status_code == 200
+    assert primera.json()["personas_beneficiadas"] == 12
+
+    correccion = api_client.patch(
+        endpoint,
+        headers=headers,
+        json={"personas_beneficiadas": 9},
+    )
+    assert correccion.status_code == 200
+    assert correccion.json()["personas_beneficiadas"] == 9
+
+    consulta_data.db.refresh(consulta_data.entregado)
+    assert consulta_data.entregado.personas_beneficiadas == 9
+    historial = api_client.get(
+        f"/api/v1/rescates/{consulta_data.entregado.id}/historial",
+        headers=_headers(consulta_data.fundacion),
+    )
+    eventos = [
+        item
+        for item in historial.json()
+        if item["detalle"].get("accion") == "personas_beneficiadas_actualizadas"
+    ]
+    assert [item["detalle"] for item in eventos] == [
+        {
+            "accion": "personas_beneficiadas_actualizadas",
+            "personas_beneficiadas_anterior": None,
+            "personas_beneficiadas": 12,
+        },
+        {
+            "accion": "personas_beneficiadas_actualizadas",
+            "personas_beneficiadas_anterior": 12,
+            "personas_beneficiadas": 9,
+        },
+    ]
+    assert all(
+        item["estado_anterior"] == item["estado_nuevo"] == RescateEstado.ENTREGADO.value
+        for item in eventos
+    )
+
+
+def test_patch_beneficiados_restringe_organizacion_y_estado(
+    api_client, consulta_data
+):
+    ajeno = api_client.patch(
+        f"/api/v1/rescates/{consulta_data.entregado.id}/beneficiados",
+        headers=_headers(consulta_data.usuario_otra_organizacion),
+        json={"personas_beneficiadas": 12},
+    )
+    no_entregado = api_client.patch(
+        f"/api/v1/rescates/{consulta_data.recogido.id}/beneficiados",
+        headers=_headers(consulta_data.usuario_organizacion),
+        json={"personas_beneficiadas": 12},
+    )
+
+    assert ajeno.status_code == 403
+    assert no_entregado.status_code == 409
+    consulta_data.db.refresh(consulta_data.entregado)
+    assert consulta_data.entregado.personas_beneficiadas is None
+
+
+def test_entrega_de_organizacion_distinta_responde_403_sin_cambios(
+    api_client, consulta_data
+):
+    response = api_client.post(
+        f"/api/v1/rescates/{consulta_data.recogido.id}/entrega",
+        headers=_headers(consulta_data.usuario_otra_organizacion),
+        json={
+            "recibido_por": str(consulta_data.usuario_otra_organizacion.id),
+            "cantidad_recibida": 8.5,
+            "unidad": "kg",
+            "es_medida": True,
+        },
+    )
+
+    assert response.status_code == 403
+    consulta_data.db.refresh(consulta_data.recogido)
+    assert consulta_data.recogido.estado == RescateEstado.RECOGIDO
+    assert consulta_data.recogido.recibido_por is None
+
+
+def test_entrega_de_rescate_no_recogido_responde_409_sin_cambios(
+    api_client, consulta_data
+):
+    response = api_client.post(
+        f"/api/v1/rescates/{consulta_data.asignado.id}/entrega",
+        headers=_headers(consulta_data.usuario_organizacion),
+        json={
+            "recibido_por": str(consulta_data.usuario_organizacion.id),
+            "cantidad_recibida": 8.5,
+            "unidad": "kg",
+            "es_medida": True,
+        },
+    )
+
+    assert response.status_code == 409
+    consulta_data.db.refresh(consulta_data.asignado)
+    assert consulta_data.asignado.estado == RescateEstado.ASIGNADO
+    assert consulta_data.asignado.recibido_por is None
+
+
+def test_entrega_no_permite_suplantar_recibido_por(api_client, consulta_data):
+    response = api_client.post(
+        f"/api/v1/rescates/{consulta_data.recogido.id}/entrega",
+        headers=_headers(consulta_data.usuario_organizacion),
+        json={
+            "recibido_por": str(consulta_data.fundacion.id),
+            "cantidad_recibida": 8.5,
+            "unidad": "kg",
+            "es_medida": True,
+        },
+    )
+
+    assert response.status_code == 403
+    consulta_data.db.refresh(consulta_data.recogido)
+    assert consulta_data.recogido.estado == RescateEstado.RECOGIDO
+
+
 def test_voluntario_ajeno_no_puede_marcar_entrega(api_client, consulta_data):
     response = api_client.post(
         f"/api/v1/rescates/{consulta_data.asignado.id}/entrega-voluntario",
@@ -448,9 +639,44 @@ def test_detalle_autoriza_organizacion_y_comercio_propietarios(
     assert organizacion.json()["fundacion"] == consulta_data.fundacion.nombre
     assert organizacion.json()["voluntario"] == consulta_data.voluntario.nombre
     assert organizacion.json()["estado_visual"] == "por_recibir"
+    assert organizacion.json()["alimento"] == consulta_data.asignado.alimento
+    assert organizacion.json()["cantidad_aprox"] == consulta_data.asignado.cantidad_aprox
     assert comercio.json()["comercio"] == consulta_data.comercio.nombre
     assert "lugar_recogida" not in organizacion.json()
     assert "cantidad_aprox" not in comercio.json()
+    assert "personas_beneficiadas" not in organizacion.json()
+
+
+def test_detalle_de_entrega_expone_datos_requeridos_solo_a_organizacion(
+    api_client, consulta_data
+):
+    rescate = consulta_data.entregado
+    rescate.recibido_por = consulta_data.usuario_organizacion.id
+    rescate.cantidad_recibida = 8.5
+    rescate.unidad_recibida = "kg"
+    rescate.es_medida = True
+    rescate.personas_beneficiadas = 12
+    rescate.entregado_en = datetime.now(timezone.utc)
+    consulta_data.db.commit()
+
+    organizacion = api_client.get(
+        f"/api/v1/rescates/{rescate.id}",
+        headers=_headers(consulta_data.usuario_organizacion),
+    )
+    comercio = api_client.get(
+        f"/api/v1/rescates/{rescate.id}",
+        headers=_headers(consulta_data.usuario_comercio),
+    )
+
+    assert organizacion.status_code == comercio.status_code == 200
+    body = organizacion.json()
+    assert body["recibido_por_nombre"] == consulta_data.usuario_organizacion.nombre
+    assert body["cantidad_recibida"] == 8.5
+    assert body["unidad_recibida"] == "kg"
+    assert body["es_medida"] is True
+    assert body["personas_beneficiadas"] == 12
+    assert body["entregado_en"]
+    assert "personas_beneficiadas" not in comercio.json()
 
 
 @pytest.mark.parametrize("usuario", ["usuario_otra_organizacion", "usuario_otro_comercio"])

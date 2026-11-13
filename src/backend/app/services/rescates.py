@@ -96,6 +96,10 @@ def marcar_rescate_no_completado(
         raise
 
 
+class OrganizacionNoAutorizada(PermissionError):
+    pass
+
+
 def listar_historial_rescate(db: Session, rescate_id: UUID) -> list[dict]:
     """Devuelve el historial con el responsable y su rol en orden cronológico."""
     rescate_existe = db.scalar(select(Rescate.id).where(Rescate.id == rescate_id))
@@ -532,15 +536,16 @@ def confirmar_recepcion_organizacion(
     )
     if organizacion_id is None:
         db.rollback()
-        raise RescateNoEncontrado
-    asignado = db.scalar(
-        select(Rescate.id).where(
-            Rescate.id == rescate_id, Rescate.organizacion_id == organizacion_id
-        )
+        raise OrganizacionNoAutorizada
+    organizacion_destino_id = db.scalar(
+        select(Rescate.organizacion_id).where(Rescate.id == rescate_id)
     )
-    if asignado is None:
+    if organizacion_destino_id is None:
         db.rollback()
         raise RescateNoEncontrado
+    if organizacion_destino_id != organizacion_id:
+        db.rollback()
+        raise OrganizacionNoAutorizada
 
     try:
         actualizado = cambiar_estado(
@@ -578,6 +583,59 @@ def confirmar_recepcion_organizacion(
         raise
 
 
+def actualizar_personas_beneficiadas(
+    db: Session,
+    rescate_id: UUID,
+    usuario_id: UUID,
+    personas_beneficiadas: int,
+) -> Rescate:
+    organizacion_id = db.scalar(
+        select(Usuario.organizacion_id).where(Usuario.id == usuario_id)
+    )
+    if organizacion_id is None:
+        db.rollback()
+        raise OrganizacionNoAutorizada
+
+    rescate = db.scalar(
+        select(Rescate).where(Rescate.id == rescate_id).with_for_update()
+    )
+    if rescate is None:
+        db.rollback()
+        raise RescateNoEncontrado
+    if rescate.organizacion_id != organizacion_id:
+        db.rollback()
+        raise OrganizacionNoAutorizada
+    if rescate.estado != RescateEstado.ENTREGADO:
+        db.rollback()
+        raise ConflictoEstadoRescate
+
+    anterior = rescate.personas_beneficiadas
+    if anterior == personas_beneficiadas:
+        return rescate
+
+    try:
+        rescate.personas_beneficiadas = personas_beneficiadas
+        db.add(
+            RescateHistorial(
+                rescate_id=rescate_id,
+                estado_anterior=RescateEstado.ENTREGADO,
+                estado_nuevo=RescateEstado.ENTREGADO,
+                cambiado_por=usuario_id,
+                detalle={
+                    "accion": "personas_beneficiadas_actualizadas",
+                    "personas_beneficiadas_anterior": anterior,
+                    "personas_beneficiadas": personas_beneficiadas,
+                },
+            )
+        )
+        db.commit()
+        db.refresh(rescate)
+        return rescate
+    except Exception:
+        db.rollback()
+        raise
+
+
 def obtener_detalle_rescate(
     db: Session, rescate_id: UUID, usuario: CurrentUser
 ) -> dict | None:
@@ -585,6 +643,7 @@ def obtener_detalle_rescate(
     voluntario = aliased(Usuario)
     creador = aliased(Usuario)
     fundacion = aliased(Usuario)
+    recibido_por = aliased(Usuario)
     row = db.execute(
         select(
             Rescate,
@@ -596,12 +655,14 @@ def obtener_detalle_rescate(
             fundacion.nombre,
             Usuario.organizacion_id,
             Usuario.comercio_id,
+            recibido_por.nombre,
         )
         .join(Comercio, Comercio.id == Rescate.comercio_id)
         .join(creador, creador.id == Rescate.registrado_por)
         .outerjoin(organizacion, organizacion.id == Rescate.organizacion_id)
         .outerjoin(voluntario, voluntario.id == Rescate.voluntario_id)
         .outerjoin(fundacion, fundacion.id == Rescate.asignado_por)
+        .outerjoin(recibido_por, recibido_por.id == Rescate.recibido_por)
         .join(Usuario, Usuario.id == usuario.usuario_id)
         .where(Rescate.id == rescate_id)
     ).one_or_none()
@@ -618,6 +679,7 @@ def obtener_detalle_rescate(
         fundacion_nombre,
         usuario_organizacion_id,
         usuario_comercio_id,
+        recibido_por_nombre,
     ) = row
     autorizado = usuario.rol == UsuarioRol.FUNDACION.value or (
         usuario.rol == UsuarioRol.VOLUNTARIO.value
@@ -652,6 +714,17 @@ def obtener_detalle_rescate(
         "observaciones": rescate.observaciones,
         "origen_aviso": origen_aviso.value,
     }
+    if usuario.rol == UsuarioRol.ORGANIZACION.value:
+        detalle.update(
+            {
+                "recibido_por_nombre": recibido_por_nombre,
+                "cantidad_recibida": rescate.cantidad_recibida,
+                "unidad_recibida": rescate.unidad_recibida,
+                "es_medida": rescate.es_medida,
+                "personas_beneficiadas": rescate.personas_beneficiadas,
+                "entregado_en": rescate.entregado_en,
+            }
+        )
     if usuario.rol == UsuarioRol.ORGANIZACION.value:
         detalle["estado_visual"] = (
             "recibido"
@@ -694,10 +767,18 @@ def obtener_detalle_rescate(
                 "estado_visual",
                 "pendiente_asignar",
                 "comercio",
+                "alimento",
+                "cantidad_aprox",
                 "organizacion",
                 "voluntario",
                 "fundacion",
                 "asignado_en",
+                "recibido_por_nombre",
+                "cantidad_recibida",
+                "unidad_recibida",
+                "es_medida",
+                "personas_beneficiadas",
+                "entregado_en",
             )
         }
     return {

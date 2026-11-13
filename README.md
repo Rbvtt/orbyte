@@ -352,6 +352,13 @@ El voluntario asignado puede consultar en `GET /api/v1/rescates/{id}` la hora
 límite, el lugar de recogida, la cantidad y el lugar de entrega. Los demás
 roles no reciben esos datos del traslado.
 
+La organización destino registra o corrige el conteo de personas beneficiadas
+con `PATCH /api/v1/rescates/{id}/beneficiados`, enviando
+`{"personas_beneficiadas": 12}`. Solo se acepta para rescates en estado
+`entregado`; el valor debe ser un entero no negativo. La operación agrega al
+historial el valor anterior y el nuevo, incluso cuando se corrige un conteo,
+sin guardar datos personales de las personas beneficiadas.
+
 ### Avisos propios del comercio
 
 Desde `/home` → **Gestionar mis avisos**, un comercio puede consultar sus
@@ -393,7 +400,11 @@ existencia del recurso. El voluntario asignado recibe los cuatro datos del
 traslado: `lugar_recogida`, `hora_limite`, `cantidad_aprox` y
 `lugar_entrega`, derivado de `organizaciones_receptoras.direccion`. Los
 campos devueltos se filtran según el rol y nunca incluyen credenciales,
-tokens ni hashes.
+tokens ni hashes. La organización destino también recibe la referencia del
+alimento y, después de la entrega, la cantidad reportada, su unidad, si fue
+medida o estimada, quién la recibió, la fecha y hora y el total de personas
+beneficiadas. Estos datos se muestran en `/organizacion/recepcion/{id}` y solo
+se exponen a la organización asignada.
 
 La organización receptora ve en el detalle los datos necesarios para revisar su
 recepción: alimento y cantidad de referencia; cuando ya se entregó, cantidad

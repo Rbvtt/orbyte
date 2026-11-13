@@ -1,6 +1,8 @@
 import type {
   RescateAvisoComercio,
+  RescateBeneficiados,
   RescateDetalle,
+  RescateEntrega,
   RescateHistorial,
   RescateLista,
 } from "@/types/rescates";
@@ -18,6 +20,15 @@ export const rescatesApi = {
     id: string,
     datos: { cantidad_recibida: number; unidad_recibida: string; es_medida: boolean; personas_beneficiadas?: number },
   ) => apiFetch<void>(`/api/v1/rescates/${id}/recepcion`, { method: "POST", body: datos }),
+  confirmarEntrega: (
+    id: string,
+    datos: { recibido_por: string; cantidad_recibida: number; unidad: "kg" | "aprox"; es_medida: boolean },
+  ) => apiFetch<RescateEntrega>(`/api/v1/rescates/${id}/entrega`, { method: "POST", body: datos }),
+  actualizarBeneficiados: (id: string, personas_beneficiadas: number) =>
+    apiFetch<RescateBeneficiados>(`/api/v1/rescates/${id}/beneficiados`, {
+      method: "PATCH",
+      body: { personas_beneficiadas },
+    }),
   /** GET /api/v1/rescates/{id} (#37). Los campos dependen del rol; sin permiso responde 404. */
   detalle: (id: string, signal?: AbortSignal) => apiFetch<RescateDetalle>(`/api/v1/rescates/${id}`, { signal }),
   historial: (id: string, signal?: AbortSignal) =>

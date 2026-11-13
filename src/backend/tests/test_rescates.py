@@ -17,6 +17,11 @@ from app.models import (
     Usuario,
     UsuarioRol,
 )
+from app.schemas.rescates import (
+    RescateBeneficiadosIn,
+    RescateEntregaIn,
+    RescateRecepcionIn,
+)
 from app.security import create_access_token
 
 
@@ -60,6 +65,49 @@ def valid_payload():
         "lugar_recogida": "Calle 1",
         "hora_limite": (datetime.now(timezone.utc) + timedelta(days=1)).isoformat(),
     }
+
+
+@pytest.mark.parametrize(("unidad", "es_medida"), [("kg", True), ("aprox", False)])
+def test_contrato_entrega_acepta_unidad_y_medicion_coherentes(unidad, es_medida):
+    payload = RescateEntregaIn(
+        recibido_por=uuid4(),
+        cantidad_recibida=1,
+        unidad=unidad,
+        es_medida=es_medida,
+    )
+
+    assert payload.unidad == unidad
+
+
+def test_contrato_entrega_rechaza_unidad_incoherente_con_medicion():
+    with pytest.raises(ValueError):
+        RescateEntregaIn(
+            recibido_por=uuid4(),
+            cantidad_recibida=1,
+            unidad="aprox",
+            es_medida=True,
+        )
+
+
+def test_recepcion_legacy_normaliza_aproximada_a_valor_de_base_de_datos():
+    payload = RescateRecepcionIn(
+        cantidad_recibida=1,
+        unidad_recibida="aproximada",
+        es_medida=False,
+    )
+
+    assert payload.unidad_recibida == "aprox"
+
+
+@pytest.mark.parametrize("cantidad", [0, 3, 250])
+def test_contrato_beneficiados_acepta_enteros_no_negativos(cantidad):
+    assert RescateBeneficiadosIn(personas_beneficiadas=cantidad).personas_beneficiadas == cantidad
+
+
+@pytest.mark.parametrize("cantidad", [-1, 1.5, "12"])
+def test_contrato_beneficiados_rechaza_valores_que_no_son_enteros_no_negativos(cantidad):
+    with pytest.raises(ValueError):
+        RescateBeneficiadosIn(personas_beneficiadas=cantidad)
 
 
 @pytest.mark.parametrize("rol", [UsuarioRol.VOLUNTARIO, UsuarioRol.ORGANIZACION])
