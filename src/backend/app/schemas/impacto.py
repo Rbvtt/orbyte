@@ -24,7 +24,7 @@ class RescateImpactoDetalleOut(BaseModel):
     organizacion_id: UUID
     organizacion: str
     cantidad_recibida: float
-    unidad_recibida: Literal["kg", "aproximada"]
+    unidad_recibida: Literal["kg", "aprox"]
     es_medida: bool
     personas_beneficiadas: int | None
     valor: float | int | None

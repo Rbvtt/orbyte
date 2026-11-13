@@ -18,7 +18,7 @@ CONSULTA_IMPACTO = text(
     """
     SELECT
         COALESCE(SUM(cantidad_recibida) FILTER (WHERE unidad_recibida = 'kg'), 0) AS kilogramos,
-        COALESCE(SUM(cantidad_recibida) FILTER (WHERE unidad_recibida = 'aproximada'), 0)
+        COALESCE(SUM(cantidad_recibida) FILTER (WHERE unidad_recibida = 'aprox'), 0)
             AS kilogramos_estimados,
         COALESCE(SUM(personas_beneficiadas), 0) AS personas_beneficiadas,
         COUNT(DISTINCT organizacion_id) AS organizaciones,

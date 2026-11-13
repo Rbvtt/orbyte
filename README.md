@@ -482,9 +482,10 @@ falla. El servicio para las transiciones de estado es `cambiar_estado()` de
 `app/services/transiciones.py`: hace el `UPDATE` condicional y la fila del
 historial en la misma transacción.
 
-La migración `0006` hace que `rescates.unidad_recibida` acepte `kg` o `aproximada`, los
-mismos valores que envía la API. Antes la base esperaba `aprox` y la recepción con cantidad
-estimada fallaba. La `0007` crea el índice `(estado, entregado_en)` de la consulta de impacto.
+`rescates.unidad_recibida` acepta `kg` o `aprox`. La migración `0006` la había cambiado a
+`aproximada`, y la `0008` la devolvió a `aprox`, que es lo que usan `POST /rescates/{id}/entrega`
+y la pantalla de recepción. El endpoint antiguo `/recepcion` acepta `aproximada` y la guarda como
+`aprox`. La `0007` crea el índice `(estado, entregado_en)` de la consulta de impacto.
 
 La consulta de impacto de CMP-05 (#20) está en `app/services/impacto.py`.
 `calcular_impacto(db, desde, hasta)` devuelve los kilogramos medidos, las personas
