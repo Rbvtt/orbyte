@@ -538,6 +538,7 @@ docs/
 
 ## Documentación
 
+- [Manual de operación para la fundación](docs/manual/README.md)
 - [Constitución del proyecto](docs/spec/constitucion.md)
 - [Especificación de comportamientos](docs/spec/comportamientos.md)
 - [Plan técnico](docs/spec/plan-tecnico.md)
