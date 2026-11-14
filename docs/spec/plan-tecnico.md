@@ -66,15 +66,15 @@ El historial contiene `id`, `rescate_id`, `estado_anterior`, `estado_nuevo`, `ac
 
 Los permisos se verifican en el servidor por rol **y por pertenencia al recurso**. Esta matriz expresa el comportamiento esperado; su implementación y pruebas corresponden a #40 y a cada endpoint.
 
-| Acción | Fundación | Comercio | Voluntario | Organización |
-|---|---|---|---|---|
-| Registrar aviso | En nombre de un comercio (CA-01.3) | Solo el propio comercio | No | No |
-| Asignar destino y voluntario | Sí | No | No | No |
-| Consultar rescates | Seguimiento de rescates | Solo propios | Solo asignados a sí mismo | Solo los de su organización |
-| Registrar recogida | No | No | Solo el asignado, desde `asignado` | No |
-| Confirmar recepción (`POST /api/v1/rescates/{id}/entrega`) y registrar beneficiados | No | No | No | Solo destino, desde `recogido`; responde 200, 403 para otra organización y 409 si aún no se recogió |
-| Cerrar como no completado | Sí, con motivo y estado permitido | No | No | No |
-| Consultar impacto y su detalle | Sí | No | No | No |
+| Acción | Administración | Fundación | Comercio | Voluntario | Organización |
+|---|---|---|---|---|---|
+| Registrar aviso | No | En nombre de un comercio (CA-01.3) | Solo el propio comercio | No | No |
+| Asignar destino y voluntario | No | Sí | No | No | No |
+| Consultar rescates | Todos | Seguimiento de rescates | Solo propios | Solo asignados a sí mismo | Solo los de su organización |
+| Registrar recogida | No | No | No | Solo el asignado, desde `asignado` | No |
+| Confirmar recepción (`POST /api/v1/rescates/{id}/entrega`) y registrar beneficiados | No | No | No | No | Solo destino, desde `recogido`; responde 200, 403 para otra organización y 409 si aún no se recogió |
+| Cerrar como no completado | No | Sí, con motivo y estado permitido | No | No | No |
+| Consultar impacto y su detalle | Sí | No | No | No | No |
 
 La confirmación se envía con `recibido_por`, `cantidad_recibida`, `unidad` (`kg` o `aprox`) y `es_medida`; `personas_beneficiadas` es opcional. `recibido_por` debe coincidir con el usuario autenticado, y el servidor registra la transición y su historial en una sola operación. La ruta anterior `/recepcion` se conserva para los clientes existentes.
 

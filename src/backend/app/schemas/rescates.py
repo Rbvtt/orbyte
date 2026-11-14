@@ -242,6 +242,26 @@ class RescateListaOut(BaseModel):
     estado_visual: str | None = None
 
 
+class RescateAdminOut(BaseModel):
+    id: UUID
+    estado: RescateEstado
+    alimento: str
+    cantidad_aprox: str
+    cantidad_recibida: float | None
+    unidad_recibida: str | None
+    lugar_recogida: str
+    hora_limite: datetime
+    creado_en: datetime
+    comercio: str
+    organizacion: str | None
+    voluntario: str | None
+    fundacion: str | None
+    origen_aviso: str
+    personas_beneficiadas: int | None
+    motivo_no_completado: str | None
+    archivado: bool
+
+
 class RescateDetalleOut(BaseModel):
     id: UUID
     estado: RescateEstado

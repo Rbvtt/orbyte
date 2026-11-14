@@ -48,11 +48,13 @@ Cualquier persona puede crear su cuenta en **Crear una cuenta**, desde la pantal
 
 No hay recuperación de contraseña. Si alguien la olvida, contacta al equipo técnico.
 
-### Aprobar solicitudes (administración)
+### Administrar cuentas y donaciones
 
-Con la cuenta de administración, en **Inicio → Revisar solicitudes**, aparecen las cuentas de fundaciones y comercios que esperan aprobación. Revisa los datos y toca **Aprobar cuenta** o **Rechazar**.
+Con la cuenta de administración, abre **Administración** desde el inicio. En **Usuarios** puedes filtrar las cuentas por rol y estado. Aprueba o rechaza solicitudes de fundaciones y comercios; también puedes desactivar o reactivar cuentas de otros roles. Las cuentas administradoras no se pueden modificar desde el panel.
 
 ![Solicitudes de cuenta pendientes](img/01-admin-solicitudes.png)
+
+En **Donaciones** puedes consultar el estado de cada donación, quién la publicó y a quién se asignó. Las donaciones finalizadas, no completadas o disponibles pero vencidas se pueden archivar y restaurar después. Archivar las retira del listado principal, pero conserva su historial; las que siguen en curso no se pueden archivar.
 
 ### Gestionar comercios (fundación)
 
@@ -115,7 +117,7 @@ En Rescates activos, toca **No completado** en un rescate **Disponible** o **Asi
 
 ### Consultar el impacto
 
-1. **Inicio → Consultar impacto**.
+1. Con una cuenta administradora, abre **Inicio → Administración → Consulta de impacto**.
 2. Elige las fechas **Desde** y **Hasta** y toca **Consultar periodo**.
 3. Aparecen los kilogramos medidos, las personas beneficiadas, las organizaciones receptoras y los rescates con cantidad estimada (sin kg).
 4. **Ver respaldo** en cada cifra muestra los rescates que la forman. Sirve para responder "¿de dónde sale este número?".

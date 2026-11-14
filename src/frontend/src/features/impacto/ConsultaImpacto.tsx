@@ -72,7 +72,7 @@ export function ConsultaImpacto() {
       };
     }
     sesionApi.me().then((usuario) => {
-      if (vigente && usuario.rol !== "fundacion") router.replace("/home");
+      if (vigente && usuario.rol !== "administrador") router.replace("/home");
     }).catch(() => {
       if (vigente) router.replace("/login");
     });
@@ -129,7 +129,7 @@ export function ConsultaImpacto() {
   return (
     <main className={styles.pagina}>
       <header className={styles.encabezado}>
-        <span className={styles.kicker}>Fundación · reportes</span>
+        <span className={styles.kicker}>Administración · reportes</span>
         <h1>Impacto del periodo</h1>
         <p>Consulta las donaciones entregadas y abre el respaldo de cada indicador.</p>
       </header>

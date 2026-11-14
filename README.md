@@ -260,9 +260,12 @@ Un `401` significa que falta el token, es inválido, expiró o las credenciales 
 asociado. `GET /api/v1/comercios` requiere rol `fundacion` y devuelve los
 comercios disponibles para registrar avisos.
 
-El rol `administrador` administra cuentas pendientes de fundaciones y
-comercios. No puede registrar avisos ni gestionar aprobaciones de cuentas de
-otros roles.
+El rol `administrador` puede consultar y gestionar las cuentas por rol y
+estado, supervisar todas las donaciones y consultar su impacto. Puede aprobar o rechazar solicitudes
+de fundaciones y comercios, y activar o desactivar las demás cuentas no
+administradoras. También puede archivar y restaurar donaciones finalizadas,
+no completadas o vencidas sin asignar; el archivo conserva el historial y no
+se permite retirar donaciones que siguen en curso.
 
 La fundación puede gestionar únicamente cuentas de comercio desde
 `/home` → **Gestionar comercios**. La pantalla permite consultar su estado,
@@ -425,6 +428,8 @@ Corresponde a lo implementado en `app/routers/`. Todas las rutas llevan el prefi
 | `GET /admin/usuarios` | `administrador` | También en `/admin/users` y `/auth/admin/usuarios` |
 | `GET /admin/cuentas-pendientes` | `administrador` | También en `/auth/admin/cuentas-pendientes` |
 | `POST /admin/usuarios/{id}/aprobar`, `/rechazar`, `/desactivar`, `/reactivar` | `administrador` | También bajo `/auth/admin/usuarios/{id}/` |
+| `GET /admin/rescates?archivado=false&estado=...` | `administrador` | Todas las donaciones o solo archivadas; permite filtrar por estado |
+| `POST /admin/rescates/{id}/archivar`, `/restaurar` | `administrador` | Solo archiva donaciones finalizadas o vencidas sin asignar; conserva el historial |
 | `GET /fundacion/comercios` | `fundacion` | Solo cuentas de comercio |
 | `POST /fundacion/comercios/{id}/aprobar`, `/desactivar`, `/reactivar` | `fundacion` | Solo cuentas de comercio |
 | `GET /comercios`, `/organizaciones`, `/voluntarios` | `fundacion` | Sin correos ni credenciales |
@@ -440,7 +445,7 @@ Corresponde a lo implementado en `app/routers/`. Todas las rutas llevan el prefi
 | `POST /rescates/{id}/no-completado` | `fundacion` | Solo rescates `disponible` o `asignado` |
 | `POST /rescates/{id}/entrega-voluntario` | `voluntario` | Solo el voluntario asignado |
 | `POST /rescates/{id}/recepcion` | `organizacion` | Solo la organización destino, con el rescate `recogido` |
-| `GET /impacto`, `/impacto/detalle` | `fundacion` | Indicadores y rescates entregados del periodo |
+| `GET /impacto`, `/impacto/detalle` | `administrador` | Indicadores y rescates entregados del periodo |
 
 `GET /api/v1/impacto?desde=AAAA-MM-DD&hasta=AAAA-MM-DD` calcula los
 indicadores de las fechas de calendario indicadas en la zona horaria de Colombia,
@@ -453,7 +458,7 @@ devuelve el total de la métrica y los rescates que lo respaldan. Los detalles
 incluyen fecha de entrega, comercio, organización, cantidad recibida, tipo de
 medición y beneficiarios. Para `organizaciones`, los rescates se agrupan por
 organización. Ambas rutas rechazan periodos invertidos con `422`. La pantalla
-de la fundación está en `/fundacion/impacto`; permite seleccionar cada
+de administración está en `/admin/impacto`; permite seleccionar cada
 indicador, revisar sus rescates, comprobar que el respaldo suma el total y
 abrir el historial de cada rescate.
 

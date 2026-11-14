@@ -101,7 +101,7 @@ class FakeImpactoSession:
 
 @pytest.fixture
 def impacto_client():
-    usuario = SimpleNamespace(rol="fundacion", usuario_id=uuid4(), sub="")
+    usuario = SimpleNamespace(rol="administrador", usuario_id=uuid4(), sub="")
     app.dependency_overrides[get_current_user] = lambda: CurrentUser(
         sub=str(usuario.usuario_id),
         rol=usuario.rol,
@@ -172,9 +172,9 @@ def test_detalle_organizaciones_agrupa_rescates_y_suma_al_total(impacto_client):
     assert [len(organizacion["rescates"]) for organizacion in body["organizaciones"]] == [1, 1]
 
 
-def test_impacto_requiere_rol_fundacion(impacto_client):
+def test_impacto_requiere_rol_administrador(impacto_client):
     client, usuario = impacto_client
-    usuario.rol = "organizacion"
+    usuario.rol = "fundacion"
 
     response = client.get(
         "/api/v1/impacto",

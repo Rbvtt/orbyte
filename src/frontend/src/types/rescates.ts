@@ -19,6 +19,26 @@ export interface RescateLista {
   estado_visual?: EstadoVisualRescate;
 }
 
+export interface RescateAdmin {
+  id: string;
+  estado: EstadoRescate;
+  alimento: string;
+  cantidad_aprox: string;
+  cantidad_recibida: number | null;
+  unidad_recibida: string | null;
+  lugar_recogida: string;
+  hora_limite: string;
+  creado_en: string;
+  comercio: string;
+  organizacion: string | null;
+  voluntario: string | null;
+  fundacion: string | null;
+  origen_aviso: string;
+  personas_beneficiadas: number | null;
+  motivo_no_completado: string | null;
+  archivado: boolean;
+}
+
 export type EstadoVisualRescate =
   | "disponible"
   | "no_disponible"

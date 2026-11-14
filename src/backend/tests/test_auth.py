@@ -277,10 +277,13 @@ def test_admin_solo_aprueba_cuentas_pendientes_de_comercio_o_fundacion():
     assert error.value.status_code == 409
 
 
-def test_admin_no_puede_gestionar_usuarios_fuera_de_su_alcance():
+def test_admin_puede_gestionar_cuentas_de_cualquier_rol_excepto_administrador():
     cuenta_de_organizacion = SimpleNamespace(rol=UsuarioRol.ORGANIZACION)
+    _validate_admin_managed_account(cuenta_de_organizacion)
+
+    cuenta_de_administrador = SimpleNamespace(rol=UsuarioRol.ADMINISTRADOR)
     with pytest.raises(HTTPException) as error:
-        _validate_admin_managed_account(cuenta_de_organizacion)
+        _validate_admin_managed_account(cuenta_de_administrador)
     assert error.value.status_code == 403
 
 
