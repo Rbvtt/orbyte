@@ -71,8 +71,10 @@ def consulta_data(real_db):
         "Usuario otro comercio consulta",
         comercio_id=otro_comercio.id,
     )
+    administrador = _usuario(UsuarioRol.ADMINISTRADOR, "Administrador consulta")
     real_db.add_all(
         [
+            administrador,
             fundacion,
             voluntario,
             otro_voluntario,
@@ -166,6 +168,7 @@ def consulta_data(real_db):
     real_db.commit()
     return SimpleNamespace(
         db=real_db,
+        administrador=administrador,
         fundacion=fundacion,
         voluntario=voluntario,
         otro_voluntario=otro_voluntario,
@@ -181,6 +184,7 @@ def consulta_data(real_db):
         asignado_otro_voluntario=asignado_otro_voluntario,
         recogido=recogido,
         entregado=entregado,
+        no_completado=no_completado,
         activo_ids={disponible.id, asignado.id, recogido.id},
         inactivo_ids={entregado.id, no_completado.id},
     )
@@ -240,6 +244,102 @@ def test_listado_no_marca_rescate_vencido_como_pendiente(api_client, consulta_da
     item = next(row for row in response.json() if row["id"] == str(rescate.id))
     assert item["estado"] == "disponible"
     assert item["pendiente_asignar"] is False
+
+
+def test_administrador_consulta_todos_los_estados_y_detalles(api_client, consulta_data):
+    response = api_client.get(
+        "/api/v1/admin/rescates",
+        headers=_headers(consulta_data.administrador),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    selected = [item for item in body if item["id"] in {str(i) for i in consulta_data.activo_ids | consulta_data.inactivo_ids}]
+    assert {item["id"] for item in selected} == {
+        str(item_id) for item_id in consulta_data.activo_ids | consulta_data.inactivo_ids
+    }
+    assert {item["estado"] for item in selected} == {
+        "disponible",
+        "asignado",
+        "recogido",
+        "entregado",
+        "no_completado",
+    }
+    assert next(item for item in selected if item["id"] == str(consulta_data.entregado.id))["cantidad_aprox"] == "10 kg"
+
+
+def test_administrador_archiva_y_restaura_sin_perder_historial(api_client, consulta_data):
+    rescate_id = consulta_data.no_completado.id
+    headers = _headers(consulta_data.administrador)
+
+    archivado = api_client.post(
+        f"/api/v1/admin/rescates/{rescate_id}/archivar",
+        headers=headers,
+    )
+    assert archivado.status_code == 200
+    assert archivado.json()["archivado"] is True
+    assert str(rescate_id) not in {
+        item["id"]
+        for item in api_client.get("/api/v1/admin/rescates", headers=headers).json()
+    }
+    assert str(rescate_id) in {
+        item["id"]
+        for item in api_client.get(
+            "/api/v1/admin/rescates?archivado=true",
+            headers=headers,
+        ).json()
+    }
+
+    restaurado = api_client.post(
+        f"/api/v1/admin/rescates/{rescate_id}/restaurar",
+        headers=headers,
+    )
+    assert restaurado.status_code == 200
+    assert restaurado.json()["archivado"] is False
+    historial = api_client.get(
+        f"/api/v1/rescates/{rescate_id}/historial",
+        headers=_headers(consulta_data.fundacion),
+    )
+    assert historial.status_code == 200
+    assert [item["detalle"]["accion"] for item in historial.json()][-2:] == [
+        "archivo_administrativo",
+        "restauracion_administrativa",
+    ]
+
+
+def test_administrador_no_puede_archivar_donacion_en_curso(api_client, consulta_data):
+    response = api_client.post(
+        f"/api/v1/admin/rescates/{consulta_data.asignado.id}/archivar",
+        headers=_headers(consulta_data.administrador),
+    )
+    assert response.status_code == 409
+    consulta_data.db.refresh(consulta_data.asignado)
+    assert consulta_data.asignado.archivado is False
+
+
+def test_listado_admin_donaciones_solo_administrador(api_client, consulta_data):
+    response = api_client.get(
+        "/api/v1/admin/rescates",
+        headers=_headers(consulta_data.fundacion),
+    )
+    assert response.status_code == 403
+
+
+def test_administrador_puede_abrir_detalle_e_historial_de_impacto(api_client, consulta_data):
+    headers = _headers(consulta_data.administrador)
+
+    detalle = api_client.get(
+        f"/api/v1/rescates/{consulta_data.entregado.id}",
+        headers=headers,
+    )
+    historial = api_client.get(
+        f"/api/v1/rescates/{consulta_data.entregado.id}/historial",
+        headers=headers,
+    )
+
+    assert detalle.status_code == 200
+    assert detalle.json()["alimento"] == consulta_data.entregado.alimento
+    assert historial.status_code == 200
 
 
 @pytest.mark.parametrize("query", ["/api/v1/rescates", "/api/v1/rescates?estado=invalid"])
@@ -349,7 +449,7 @@ def test_voluntario_entrega_y_organizacion_confirma_recepcion(api_client, consul
 
 
 def test_organizacion_confirma_recepcion_con_cantidad_estimada(api_client, consulta_data):
-    # Es lo que envía /mis-rescates cuando la organización elige "Cantidad aproximada".
+    # El endpoint antiguo acepta "aproximada" y guarda el valor canónico "aprox" (migración 0008).
     api_client.post(
         f"/api/v1/rescates/{consulta_data.asignado.id}/entrega-voluntario",
         headers=_headers(consulta_data.voluntario),
@@ -367,7 +467,7 @@ def test_organizacion_confirma_recepcion_con_cantidad_estimada(api_client, consu
     assert recepcion.status_code == 204
     consulta_data.db.refresh(consulta_data.asignado)
     assert consulta_data.asignado.estado == RescateEstado.ENTREGADO
-    assert consulta_data.asignado.unidad_recibida == "aproximada"
+    assert consulta_data.asignado.unidad_recibida == "aprox"
     assert consulta_data.asignado.es_medida is False
 
 
@@ -447,6 +547,36 @@ def test_entrega_acepta_unidad_aproximada_y_guarda_valor_canonico(
     assert response.json()["unidad"] == "aprox"
     consulta_data.db.refresh(consulta_data.recogido)
     assert consulta_data.recogido.unidad_recibida == "aprox"
+
+
+def test_entrega_estimada_aparece_en_el_detalle_de_impacto(api_client, consulta_data):
+    entrega = api_client.post(
+        f"/api/v1/rescates/{consulta_data.recogido.id}/entrega",
+        headers=_headers(consulta_data.usuario_organizacion),
+        json={
+            "recibido_por": str(consulta_data.usuario_organizacion.id),
+            "cantidad_recibida": 6,
+            "unidad": "aprox",
+            "es_medida": False,
+            "personas_beneficiadas": 3,
+        },
+    )
+    assert entrega.status_code == 200
+
+    hoy = datetime.now(timezone.utc).date()
+    detalle = api_client.get(
+        "/api/v1/impacto/detalle",
+        headers=_headers(consulta_data.fundacion),
+        params={
+            "metrica": "sin_kg",
+            "desde": (hoy - timedelta(days=1)).isoformat(),
+            "hasta": (hoy + timedelta(days=1)).isoformat(),
+        },
+    )
+    assert detalle.status_code == 200
+    rescates = detalle.json()["rescates"]
+    assert [r["id"] for r in rescates] == [str(consulta_data.recogido.id)]
+    assert rescates[0]["unidad_recibida"] == "aprox"
 
 
 def test_patch_beneficiados_registra_conteo_y_conserva_correccion_en_historial(

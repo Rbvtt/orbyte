@@ -113,15 +113,17 @@ def test_cada_transicion_genera_exactamente_una_fila(real_db):
     assert _estado(real_db, datos["rescate"]) == RescateEstado.NO_COMPLETADO
 
 
-def test_asignacion_y_reasignacion_usan_el_servicio_y_dejan_una_fila_cada_una(real_db):
+def test_asignacion_y_reasignacion_usan_el_servicio_y_dejan_historial(real_db):
     datos = _escenario(real_db)
 
-    asignar_rescate_con_historial(
+    rescate = asignar_rescate_con_historial(
         real_db, datos["rescate"], datos["voluntario"], datos["organizacion"], datos["fundacion"]
     )
+    assert rescate.estado == RescateEstado.ASIGNADO
+    assert rescate.asignado_en is not None
     assert _filas(real_db, datos["rescate"]) == 1
 
-    # Segunda asignación (CA-02.2): 409 y ninguna fila nueva.
+    # Segunda asignación (CA-02.2): un rescate asignado no se reasigna; 409 y ninguna fila nueva.
     with pytest.raises(ConflictoAsignacion):
         asignar_rescate_con_historial(
             real_db, datos["rescate"], datos["otro_voluntario"], datos["organizacion"], datos["fundacion"]
@@ -147,6 +149,8 @@ def test_asignacion_y_reasignacion_usan_el_servicio_y_dejan_una_fila_cada_una(re
         (RescateEstado.ASIGNADO, RescateEstado.ASIGNADO),
     ]
     assert filas[1].detalle["motivo"] == "El voluntario no puede ir"
+    assert filas[0].cambiado_por == datos["fundacion"]
+    assert real_db.scalar(select(Rescate.voluntario_id).where(Rescate.id == datos["rescate"])) == datos["otro_voluntario"]
 
 
 def test_si_falla_el_insert_del_historial_se_revierte_el_cambio_de_estado(real_db):

@@ -93,7 +93,7 @@ def test_solo_cuentan_los_rescates_entregados_del_periodo(real_db, crear_rescate
     crear_rescate(cantidad=Decimal("2.5"), personas=3, organizacion=0)
     crear_rescate(cantidad=4, personas=2, organizacion=1)
     # Cantidad estimada: no suma a los kilogramos, sí a personas y organizaciones.
-    crear_rescate(cantidad=7, unidad="aproximada", personas=1, organizacion=2)
+    crear_rescate(cantidad=7, unidad="aprox", personas=1, organizacion=2)
     # No cuentan: otros estados con datos de recepción y entregas fuera del periodo.
     crear_rescate(estado=RescateEstado.RECOGIDO, cantidad=100, personas=100, organizacion=1)
     crear_rescate(estado=RescateEstado.NO_COMPLETADO, cantidad=100, personas=100)

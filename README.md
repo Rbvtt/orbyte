@@ -260,9 +260,12 @@ Un `401` significa que falta el token, es inválido, expiró o las credenciales 
 asociado. `GET /api/v1/comercios` requiere rol `fundacion` y devuelve los
 comercios disponibles para registrar avisos.
 
-El rol `administrador` administra cuentas pendientes de fundaciones y
-comercios. No puede registrar avisos ni gestionar aprobaciones de cuentas de
-otros roles.
+El rol `administrador` puede consultar y gestionar las cuentas por rol y
+estado, supervisar todas las donaciones y consultar su impacto. Puede aprobar o rechazar solicitudes
+de fundaciones y comercios, y activar o desactivar las demás cuentas no
+administradoras. También puede archivar y restaurar donaciones finalizadas,
+no completadas o vencidas sin asignar; el archivo conserva el historial y no
+se permite retirar donaciones que siguen en curso.
 
 La fundación puede gestionar únicamente cuentas de comercio desde
 `/home` → **Gestionar comercios**. La pantalla permite consultar su estado,
@@ -433,6 +436,8 @@ Corresponde a lo implementado en `app/routers/`. Todas las rutas llevan el prefi
 | `GET /admin/usuarios` | `administrador` | También en `/admin/users` y `/auth/admin/usuarios` |
 | `GET /admin/cuentas-pendientes` | `administrador` | También en `/auth/admin/cuentas-pendientes` |
 | `POST /admin/usuarios/{id}/aprobar`, `/rechazar`, `/desactivar`, `/reactivar` | `administrador` | También bajo `/auth/admin/usuarios/{id}/` |
+| `GET /admin/rescates?archivado=false&estado=...` | `administrador` | Todas las donaciones o solo archivadas; permite filtrar por estado |
+| `POST /admin/rescates/{id}/archivar`, `/restaurar` | `administrador` | Solo archiva donaciones finalizadas o vencidas sin asignar; conserva el historial |
 | `GET /fundacion/comercios` | `fundacion` | Solo cuentas de comercio |
 | `POST /fundacion/comercios/{id}/aprobar`, `/desactivar`, `/reactivar` | `fundacion` | Solo cuentas de comercio |
 | `GET /comercios`, `/organizaciones`, `/voluntarios` | `fundacion` | Sin correos ni credenciales |
@@ -452,7 +457,7 @@ Corresponde a lo implementado en `app/routers/`. Todas las rutas llevan el prefi
 | `POST /rescates/{id}/entrega` | `organizacion` | Solo la organización destino, con el rescate `recogido` |
 | `PATCH /rescates/{id}/beneficiados` | `organizacion` | Solo la organización destino, con el rescate `entregado` |
 | `POST /rescates/{id}/recepcion` | `organizacion` | Solo la organización destino, con el rescate `recogido` |
-| `GET /impacto`, `/impacto/detalle` | `fundacion` | Indicadores y rescates entregados del periodo |
+| `GET /impacto`, `/impacto/detalle` | `administrador` | Indicadores y rescates entregados del periodo |
 
 `GET /api/v1/impacto?desde=AAAA-MM-DD&hasta=AAAA-MM-DD` calcula los
 indicadores de las fechas de calendario indicadas en la zona horaria de Colombia,
@@ -465,7 +470,7 @@ devuelve el total de la métrica y los rescates que lo respaldan. Los detalles
 incluyen fecha de entrega, comercio, organización, cantidad recibida, tipo de
 medición y beneficiarios. Para `organizaciones`, los rescates se agrupan por
 organización. Ambas rutas rechazan periodos invertidos con `422`. La pantalla
-de la fundación está en `/fundacion/impacto`; permite seleccionar cada
+de administración está en `/admin/impacto`; permite seleccionar cada
 indicador, revisar sus rescates, comprobar que el respaldo suma el total y
 abrir el historial de cada rescate.
 
@@ -496,9 +501,10 @@ historial en la misma transacción. La usan todas las transiciones (asignación,
 reasignación, cancelación, entrega y recepción). Las pruebas de estos criterios están
 en `tests/test_historial_estados.py`.
 
-La migración `0006` hace que `rescates.unidad_recibida` acepte `kg` o `aproximada`, los
-mismos valores que envía la API. Antes la base esperaba `aprox` y la recepción con cantidad
-estimada fallaba. La `0007` crea el índice `(estado, entregado_en)` de la consulta de impacto.
+`rescates.unidad_recibida` acepta `kg` o `aprox`. La migración `0006` la había cambiado a
+`aproximada`, y la `0008` la devolvió a `aprox`, que es lo que usan `POST /rescates/{id}/entrega`
+y la pantalla de recepción. El endpoint antiguo `/recepcion` acepta `aproximada` y la guarda como
+`aprox`. La `0007` crea el índice `(estado, entregado_en)` de la consulta de impacto.
 
 La consulta de impacto de CMP-05 (#20) está en `app/services/impacto.py`.
 `calcular_impacto(db, desde, hasta)` devuelve los kilogramos medidos, las personas
@@ -524,6 +530,24 @@ python -m scripts.seed_dev_usuarios
 ```
 
 Los tests que necesitan PostgreSQL se ejecutan únicamente si se define `TEST_DATABASE_URL` (por ejemplo, en `.env`); si no está definida, pytest los marca como omitidos. SQLite no es compatible con el esquema PostgreSQL.
+
+### Datos del Demo
+
+`scripts/seed_demo.py` (#26) carga datos ficticios para recorrer CMP-01 a CMP-05:
+
+- 3 comercios.
+- Las organizaciones y los voluntarios de `docs/datos/cmp02/`.
+- Una cuenta por rol con correo `demo-<rol>@example.com`: `demo-fundacion`, `demo-comercio-panaderia`, `demo-organizacion-a`, `demo-voluntario-a`, etc.
+- 15 rescates en los 5 estados, con historial coherente. Las entregas caen en dos periodos (hace unos 30 días y en la última semana), así que la consulta de impacto muestra cifras distintas por mes.
+
+Es idempotente: si se vuelve a ejecutar, no duplica ni sobrescribe. Desde `src/backend`, con el entorno virtual activo y las migraciones aplicadas:
+
+```powershell
+$env:SEED_DEMO_PASSWORD = "<clave-de-las-cuentas-demo>"
+python -m scripts.seed_demo
+```
+
+Con `ENTORNO=produccion` exige además `--produccion`. Ojo: `historial_estados` es de solo inserción, así que estos rescates no se pueden borrar uno por uno. Para empezar la operación real sin ellos, hay que vaciar las tablas con `TRUNCATE`.
 
 ## Prototipos de experiencia de usuario
 
@@ -551,6 +575,7 @@ docs/
 
 ## Documentación
 
+- [Manual de operación para la fundación](docs/manual/README.md)
 - [Constitución del proyecto](docs/spec/constitucion.md)
 - [Especificación de comportamientos](docs/spec/comportamientos.md)
 - [Plan técnico](docs/spec/plan-tecnico.md)

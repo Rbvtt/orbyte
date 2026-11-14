@@ -57,6 +57,118 @@ class ConflictoEstadoRescate(RuntimeError):
     pass
 
 
+class RescateNoArchivables(RuntimeError):
+    pass
+
+
+def listar_rescates_admin(
+    db: Session,
+    archivado: bool = False,
+    estado: RescateEstado | None = None,
+    rescate_id: UUID | None = None,
+) -> list[dict]:
+    organizacion = aliased(OrganizacionReceptora)
+    voluntario = aliased(Usuario)
+    creador = aliased(Usuario)
+    fundacion = aliased(Usuario)
+    stmt = (
+        select(
+            Rescate,
+            Comercio.nombre,
+            organizacion.nombre,
+            voluntario.nombre,
+            creador.rol,
+            fundacion.nombre,
+        )
+        .join(Comercio, Comercio.id == Rescate.comercio_id)
+        .join(creador, creador.id == Rescate.registrado_por)
+        .outerjoin(organizacion, organizacion.id == Rescate.organizacion_id)
+        .outerjoin(voluntario, voluntario.id == Rescate.voluntario_id)
+        .outerjoin(fundacion, fundacion.id == Rescate.asignado_por)
+        .where(Rescate.archivado.is_(archivado))
+    )
+    if estado is not None:
+        stmt = stmt.where(Rescate.estado == estado)
+    if rescate_id is not None:
+        stmt = stmt.where(Rescate.id == rescate_id)
+    rows = db.execute(stmt.order_by(Rescate.creado_en.desc())).all()
+    return [
+        {
+            "id": rescate.id,
+            "estado": rescate.estado,
+            "alimento": rescate.alimento,
+            "cantidad_aprox": rescate.cantidad_aprox,
+            "cantidad_recibida": rescate.cantidad_recibida,
+            "unidad_recibida": rescate.unidad_recibida,
+            "lugar_recogida": rescate.lugar_recogida,
+            "hora_limite": rescate.hora_limite,
+            "creado_en": rescate.creado_en,
+            "comercio": comercio_nombre,
+            "organizacion": organizacion_nombre,
+            "voluntario": voluntario_nombre,
+            "fundacion": fundacion_nombre,
+            "origen_aviso": creador_rol.value,
+            "personas_beneficiadas": rescate.personas_beneficiadas,
+            "motivo_no_completado": rescate.motivo_no_completado,
+            "archivado": rescate.archivado,
+        }
+        for (
+            rescate,
+            comercio_nombre,
+            organizacion_nombre,
+            voluntario_nombre,
+            creador_rol,
+            fundacion_nombre,
+        ) in rows
+    ]
+
+
+def archivar_rescate_admin(
+    db: Session,
+    rescate_id: UUID,
+    actor_id: UUID,
+    archivado: bool,
+) -> Rescate:
+    rescate = db.scalar(
+        select(Rescate).where(Rescate.id == rescate_id).with_for_update()
+    )
+    if rescate is None:
+        db.rollback()
+        raise RescateNoEncontrado
+    if rescate.archivado == archivado:
+        db.rollback()
+        raise RescateNoArchivables
+    if archivado and not (
+        rescate.estado in (RescateEstado.ENTREGADO, RescateEstado.NO_COMPLETADO)
+        or (
+            rescate.estado == RescateEstado.DISPONIBLE
+            and rescate.hora_limite <= datetime.now(timezone.utc)
+        )
+    ):
+        db.rollback()
+        raise RescateNoArchivables
+
+    try:
+        rescate.archivado = archivado
+        db.add(
+            RescateHistorial(
+                rescate_id=rescate.id,
+                estado_anterior=rescate.estado,
+                estado_nuevo=rescate.estado,
+                cambiado_por=actor_id,
+                detalle={
+                    "accion": "archivo_administrativo" if archivado else "restauracion_administrativa"
+                },
+            )
+        )
+        db.commit()
+        db.refresh(rescate)
+        return rescate
+    except Exception:
+        db.rollback()
+        raise
+
+
 def marcar_rescate_no_completado(
     db: Session,
     rescate_id: UUID,
@@ -190,6 +302,8 @@ def asignar_rescate_con_historial(
     voluntario_id: UUID,
     organizacion_id: UUID,
     asignado_por: UUID,
+    motivo: str | None = None,
+    solo_reasignar: bool = False,
 ) -> Rescate:
     rescate = db.scalar(
         select(Rescate).where(Rescate.id == rescate_id).with_for_update()
@@ -297,7 +411,7 @@ def listar_avisos_comercio(db: Session, comercio_id: UUID) -> list[Rescate]:
     return list(
         db.scalars(
             select(Rescate)
-            .where(Rescate.comercio_id == comercio_id)
+            .where(Rescate.comercio_id == comercio_id, Rescate.archivado.is_(False))
             .order_by(Rescate.creado_en.desc())
         ).all()
     )
@@ -455,7 +569,8 @@ def listar_rescates_activos(db: Session) -> list[dict]:
                     RescateEstado.ASIGNADO,
                     RescateEstado.RECOGIDO,
                 )
-            )
+            ),
+            Rescate.archivado.is_(False),
         )
         .order_by(Rescate.hora_limite.asc())
     ).all()
@@ -514,6 +629,7 @@ def listar_asignaciones_usuario(db: Session, usuario: CurrentUser) -> list[dict]
         .outerjoin(fundacion, fundacion.id == Rescate.asignado_por)
         .where(
             filtro_asignacion,
+            Rescate.archivado.is_(False),
             Rescate.estado.in_(
                 (RescateEstado.ASIGNADO, RescateEstado.RECOGIDO, RescateEstado.ENTREGADO)
             ),
@@ -753,7 +869,10 @@ def obtener_detalle_rescate(
         usuario_comercio_id,
         recibido_por_nombre,
     ) = row
-    autorizado = usuario.rol == UsuarioRol.FUNDACION.value or (
+    autorizado = usuario.rol in {
+        UsuarioRol.FUNDACION.value,
+        UsuarioRol.ADMINISTRADOR.value,
+    } or (
         usuario.rol == UsuarioRol.VOLUNTARIO.value
         and rescate.voluntario_id == usuario.usuario_id
     ) or (
@@ -763,7 +882,9 @@ def obtener_detalle_rescate(
         usuario.rol == UsuarioRol.COMERCIO.value
         and rescate.comercio_id == usuario_comercio_id
     )
-    if not autorizado:
+    if not autorizado or (
+        rescate.archivado and usuario.rol != UsuarioRol.ADMINISTRADOR.value
+    ):
         return None
 
     detalle = {
@@ -812,7 +933,7 @@ def obtener_detalle_rescate(
             if rescate.estado == RescateEstado.RECOGIDO
             else rescate.estado.value
         )
-    if usuario.rol == UsuarioRol.FUNDACION.value:
+    if usuario.rol in {UsuarioRol.FUNDACION.value, UsuarioRol.ADMINISTRADOR.value}:
         return detalle
     if usuario.rol == UsuarioRol.VOLUNTARIO.value:
         return {

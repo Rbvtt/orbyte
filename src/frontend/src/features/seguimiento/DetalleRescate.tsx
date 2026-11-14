@@ -54,8 +54,8 @@ function ErrorDetalle({ status, mensaje, reintentar }: { status: number | null; 
             <strong>No puedes ver este rescate.</strong>
           </p>
           <p>
-            Solo lo ven la fundación, el voluntario asignado, la organización que lo recibe y el comercio que avisó. Si
-            crees que es un error, comunícate con la fundación.
+            Solo lo ven administración, la fundación, el voluntario asignado, la organización que lo recibe y el
+            comercio que avisó. Si crees que es un error, comunícate con la fundación.
           </p>
         </div>
       </div>
