@@ -250,6 +250,20 @@ textarea {
   background: #f8faf8;
 }
 
+.btn--danger {
+  background: var(--negative);
+  color: #fff;
+}
+
+.btn--danger:hover {
+  background: #8f1d15;
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .btn--ghost {
   background: transparent;
   color: var(--text);

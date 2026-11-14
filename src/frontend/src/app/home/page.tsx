@@ -37,20 +37,20 @@ type VistaRol = {
 const VISTAS: Record<RolUsuario, VistaRol> = {
   administrador: {
     nombre: "Administración",
-    saludo: "Una red organizada empieza con accesos confiables.",
-    descripcion: "Revisa las solicitudes de fundaciones y comercios y gestiona su acceso a Orbyte.",
-    enfoque: "Gestión de cuentas",
+    saludo: "Supervisa cada parte de la red desde un solo lugar.",
+    descripcion: "Gestiona cuentas por rol y estado, y da seguimiento a todas las donaciones.",
+    enfoque: "Control de la plataforma",
     acciones: [
       {
-        titulo: "Revisar solicitudes",
-        descripcion: "Consulta la información y aprueba o rechaza cuentas pendientes.",
+        titulo: "Abrir administración",
+        descripcion: "Gestiona usuarios y revisa donaciones en cada etapa.",
         href: "/admin",
         icono: IconoPersonaCheck,
-        etiqueta: "Aprobaciones",
+        etiqueta: "Panel de control",
       },
     ],
     notaTitulo: "Tu alcance",
-    nota: "Desde este espacio puedes gestionar cuentas pendientes de fundaciones y comercios. La operación de rescates corresponde al equipo de la fundación.",
+    nota: "Puedes administrar todas las cuentas no administrativas y archivar donaciones finalizadas o vencidas sin borrar su historial.",
   },
   fundacion: {
     nombre: "Fundación",
@@ -64,13 +64,6 @@ const VISTAS: Record<RolUsuario, VistaRol> = {
         href: "/fundacion/rescates",
         icono: IconoCamion,
         etiqueta: "Operación",
-      },
-      {
-        titulo: "Consultar impacto",
-        descripcion: "Revisa las cifras del periodo y consulta los rescates que las respaldan.",
-        href: "/fundacion/impacto",
-        icono: IconoBalanza,
-        etiqueta: "Reportes",
       },
       {
         titulo: "Registrar un aviso",

@@ -201,6 +201,51 @@
   margin: 0;
 }
 
+.cierre {
+  margin-top: 20px;
+}
+
+.cierreContenido {
+  display: grid;
+  gap: 10px;
+  padding: 16px 20px 20px;
+}
+
+.etiqueta {
+  font-weight: 600;
+}
+
+.motivo {
+  margin: 0;
+  padding: 16px 20px 20px;
+  white-space: pre-wrap;
+}
+
+.confirmacion {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--notice-border);
+  border-radius: var(--radius-control);
+  background: var(--notice-bg);
+}
+
+.confirmacion p,
+.errorAccion {
+  margin: 0;
+}
+
+.botonesCierre {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.errorAccion {
+  color: var(--negative);
+}
+
 @media (max-width: 560px) {
   .pagina {
     padding: 24px 15px 44px;

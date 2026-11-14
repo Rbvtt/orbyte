@@ -104,18 +104,9 @@ class RescateAsignacionIn(BaseModel):
     motivo: str | None = None
 
 
-class RescateAsignacionOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: UUID
-    estado: RescateEstado
+class RescateReasignacionIn(BaseModel):
     organizacion_id: UUID
     voluntario_id: UUID
-    asignado_en: datetime
-    asignado_por: UUID
-
-
-class RescateNoCompletadoIn(BaseModel):
     motivo: str = Field(min_length=1)
 
     @field_validator("motivo", mode="before")
@@ -125,12 +116,30 @@ class RescateNoCompletadoIn(BaseModel):
             return value
         cleaned = value.strip()
         if not cleaned:
-            raise ValueError("El motivo es obligatorio")
+            raise ValueError("El motivo es obligatorio para la reasignación")
         return cleaned
 
 
-class RescateNoCompletadoOut(RescateOut):
-    motivo_no_completado: str
+class RescateNoCompletadoIn(BaseModel):
+    motivo: str = Field(min_length=1, max_length=2000)
+
+    @field_validator("motivo", mode="before")
+    @classmethod
+    def normalize_motivo(cls, value: str) -> str:
+        if isinstance(value, str):
+            value = value.strip()
+        return value
+
+
+class RescateAsignacionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    estado: RescateEstado
+    organizacion_id: UUID
+    voluntario_id: UUID
+    asignado_en: datetime
+    asignado_por: UUID
 
 
 class RescateHistorialOut(BaseModel):
@@ -195,6 +204,14 @@ class RescateEntregaOut(BaseModel):
     personas_beneficiadas: int | None
 
 
+class RescateNoCompletadoOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    estado: RescateEstado
+    motivo_no_completado: str
+
+
 class RescateBeneficiadosIn(BaseModel):
     personas_beneficiadas: int = Field(ge=0, strict=True)
 
@@ -242,6 +259,26 @@ class RescateListaOut(BaseModel):
     estado_visual: str | None = None
 
 
+class RescateAdminOut(BaseModel):
+    id: UUID
+    estado: RescateEstado
+    alimento: str
+    cantidad_aprox: str
+    cantidad_recibida: float | None
+    unidad_recibida: str | None
+    lugar_recogida: str
+    hora_limite: datetime
+    creado_en: datetime
+    comercio: str
+    organizacion: str | None
+    voluntario: str | None
+    fundacion: str | None
+    origen_aviso: str
+    personas_beneficiadas: int | None
+    motivo_no_completado: str | None
+    archivado: bool
+
+
 class RescateDetalleOut(BaseModel):
     id: UUID
     estado: RescateEstado
@@ -262,6 +299,7 @@ class RescateDetalleOut(BaseModel):
     asignado_por: UUID | None = None
     observaciones: str | None = None
     origen_aviso: str | None = None
+    motivo_no_completado: str | None = None
     recibido_por_nombre: str | None = None
     cantidad_recibida: float | None = None
     unidad_recibida: str | None = None

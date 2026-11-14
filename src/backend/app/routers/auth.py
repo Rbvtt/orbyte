@@ -376,14 +376,19 @@ def _update_account_state(
 
 
 def _validate_admin_managed_account(usuario: Usuario) -> None:
-    if usuario.rol not in {UsuarioRol.FUNDACION, UsuarioRol.COMERCIO}:
+    if usuario.rol == UsuarioRol.ADMINISTRADOR:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Esta cuenta no está dentro del alcance de administración.",
+            detail="No se pueden gestionar cuentas de administrador.",
         )
 
 
 def _validate_pending_approval(usuario: Usuario) -> None:
+    if usuario.rol not in {UsuarioRol.FUNDACION, UsuarioRol.COMERCIO}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo se pueden aprobar cuentas de fundaciones y comercios.",
+        )
     _validate_admin_managed_account(usuario)
     if usuario.estado != UsuarioEstado.PENDIENTE:
         raise HTTPException(

@@ -5,7 +5,9 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.deps import CurrentUser, require_role
+from app.models import RescateEstado
 from app.schemas.rescates import (
+    RescateAdminOut,
     RescateAsignacionIn,
     RescateAsignacionOut,
     RescateBeneficiadosIn,
@@ -21,6 +23,7 @@ from app.schemas.rescates import (
     RescateNoCompletadoOut,
     RescateOut,
     RescateRecepcionIn,
+    RescateReasignacionIn,
     RescateUpdate,
 )
 from app.services.rescates import (
@@ -30,6 +33,8 @@ from app.services.rescates import (
     RecursoAsignacionNoEncontrado,
     RescateNoEditable,
     RescateNoEncontrado,
+    RescateNoArchivables,
+    archivar_rescate_admin,
     asignar_rescate_con_historial,
     actualizar_personas_beneficiadas,
     cancelar_aviso_comercio,
@@ -40,13 +45,75 @@ from app.services.rescates import (
     listar_avisos_comercio,
     listar_asignaciones_usuario,
     listar_historial_rescate,
+    listar_rescates_admin,
     listar_rescates_activos,
-    marcar_rescate_no_completado,
+    marcar_no_completado,
     obtener_detalle_rescate,
 )
 
 
 router = APIRouter(prefix="/api/v1/rescates", tags=["rescates"])
+admin_router = APIRouter(prefix="/api/v1/admin/rescates", tags=["admin"])
+
+
+@admin_router.get("", response_model=list[RescateAdminOut])
+def admin_list_rescates(
+    archivado: bool = False,
+    estado: RescateEstado | None = None,
+    _current_user: CurrentUser = Depends(require_role("administrador")),
+    db: Session = Depends(get_db),
+) -> list[RescateAdminOut]:
+    return [
+        RescateAdminOut.model_validate(item)
+        for item in listar_rescates_admin(db, archivado, estado)
+    ]
+
+
+def _admin_rescate_por_id(db: Session, rescate_id: UUID, archivado: bool) -> RescateAdminOut:
+    items = listar_rescates_admin(db, archivado=archivado, rescate_id=rescate_id)
+    if not items:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="No se pudo recuperar la donación actualizada",
+        )
+    return RescateAdminOut.model_validate(items[0])
+
+
+@admin_router.post("/{rescate_id}/archivar", response_model=RescateAdminOut)
+def admin_archive_rescate(
+    rescate_id: UUID,
+    current_user: CurrentUser = Depends(require_role("administrador")),
+    db: Session = Depends(get_db),
+) -> RescateAdminOut:
+    if current_user.usuario_id is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="No autorizado")
+    try:
+        archivar_rescate_admin(db, rescate_id, current_user.usuario_id, True)
+    except RescateNoEncontrado:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="La donación no existe") from None
+    except RescateNoArchivables:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Solo se pueden archivar donaciones finalizadas, no completadas o vencidas sin asignar",
+        ) from None
+    return _admin_rescate_por_id(db, rescate_id, True)
+
+
+@admin_router.post("/{rescate_id}/restaurar", response_model=RescateAdminOut)
+def admin_restore_rescate(
+    rescate_id: UUID,
+    current_user: CurrentUser = Depends(require_role("administrador")),
+    db: Session = Depends(get_db),
+) -> RescateAdminOut:
+    if current_user.usuario_id is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="No autorizado")
+    try:
+        archivar_rescate_admin(db, rescate_id, current_user.usuario_id, False)
+    except RescateNoEncontrado:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="La donación no existe") from None
+    except RescateNoArchivables:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="La donación no está archivada") from None
+    return _admin_rescate_por_id(db, rescate_id, False)
 
 
 @router.get("", response_model=list[RescateListaOut])
@@ -240,7 +307,7 @@ def patch_personas_beneficiadas(
 )
 def get_historial_rescate(
     rescate_id: UUID,
-    _current_user: CurrentUser = Depends(require_role("fundacion")),
+    _current_user: CurrentUser = Depends(require_role("fundacion", "administrador")),
     db: Session = Depends(get_db),
 ) -> list[RescateHistorialOut]:
     try:
@@ -261,7 +328,7 @@ def get_historial_rescate(
 def get_rescate(
     rescate_id: UUID,
     current_user: CurrentUser = Depends(
-        require_role("fundacion", "voluntario", "organizacion", "comercio")
+        require_role("fundacion", "administrador", "voluntario", "organizacion", "comercio")
     ),
     db: Session = Depends(get_db),
 ) -> RescateDetalleOut:
@@ -353,9 +420,10 @@ def post_no_completado(
 
 def _guardar_asignacion(
     rescate_id: UUID,
-    datos: RescateAsignacionIn,
+    datos: RescateAsignacionIn | RescateReasignacionIn,
     current_user: CurrentUser,
     db: Session,
+    solo_reasignar: bool,
 ) -> RescateAsignacionOut:
     if current_user.usuario_id is None:
         raise RuntimeError("El usuario autenticado no tiene un identificador")
@@ -366,6 +434,8 @@ def _guardar_asignacion(
             datos.voluntario_id,
             datos.organizacion_id,
             current_user.usuario_id,
+            motivo=datos.motivo,
+            solo_reasignar=solo_reasignar,
         )
     except RescateNoEncontrado:
         raise HTTPException(
@@ -409,4 +479,46 @@ def assign_rescate(
     current_user: CurrentUser = Depends(require_role("fundacion")),
     db: Session = Depends(get_db),
 ) -> RescateAsignacionOut:
-    return _guardar_asignacion(rescate_id, datos, current_user, db)
+    return _guardar_asignacion(rescate_id, datos, current_user, db, solo_reasignar=False)
+
+
+@router.patch(
+    "/{rescate_id}/reasignacion",
+    response_model=RescateAsignacionOut,
+)
+def reassign_rescate(
+    rescate_id: UUID,
+    datos: RescateReasignacionIn,
+    current_user: CurrentUser = Depends(require_role("fundacion")),
+    db: Session = Depends(get_db),
+) -> RescateAsignacionOut:
+    return _guardar_asignacion(rescate_id, datos, current_user, db, solo_reasignar=True)
+
+
+@router.post(
+    "/{rescate_id}/no-completado",
+    response_model=RescateNoCompletadoOut,
+)
+def close_rescate_no_completado(
+    rescate_id: UUID,
+    datos: RescateNoCompletadoIn,
+    current_user: CurrentUser = Depends(require_role("fundacion")),
+    db: Session = Depends(get_db),
+) -> RescateNoCompletadoOut:
+    if current_user.usuario_id is None:
+        raise RuntimeError("El usuario autenticado no tiene un identificador")
+    try:
+        rescate = marcar_no_completado(
+            db, rescate_id, current_user.usuario_id, datos.motivo
+        )
+    except RescateNoEncontrado:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="El rescate no existe",
+        ) from None
+    if rescate is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Solo se pueden cerrar como no completados los rescates disponibles o asignados",
+        )
+    return RescateNoCompletadoOut.model_validate(rescate)

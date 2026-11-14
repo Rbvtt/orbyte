@@ -36,7 +36,7 @@ def _rango(desde: date, hasta: date) -> tuple[datetime, datetime]:
 def get_impacto(
     desde: date,
     hasta: date,
-    _current_user: CurrentUser = Depends(require_role("fundacion")),
+    _current_user: CurrentUser = Depends(require_role("administrador")),
     db: Session = Depends(get_db),
 ) -> ImpactoOut:
     inicio, fin = _rango(desde, hasta)
@@ -55,7 +55,7 @@ def get_detalle_impacto(
     desde: date,
     hasta: date,
     metrica: Literal["kg", "personas", "organizaciones", "sin_kg"],
-    _current_user: CurrentUser = Depends(require_role("fundacion")),
+    _current_user: CurrentUser = Depends(require_role("administrador")),
     db: Session = Depends(get_db),
 ) -> ImpactoDetalleOut:
     inicio, fin = _rango(desde, hasta)

@@ -166,6 +166,9 @@ class Rescate(Base):
     es_medida: Mapped[bool | None] = mapped_column(Boolean)
     personas_beneficiadas: Mapped[int | None] = mapped_column(Integer)
     motivo_no_completado: Mapped[str | None] = mapped_column(Text)
+    archivado: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
 
 
 class RescateHistorial(Base):

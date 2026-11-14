@@ -260,9 +260,12 @@ Un `401` significa que falta el token, es inválido, expiró o las credenciales 
 asociado. `GET /api/v1/comercios` requiere rol `fundacion` y devuelve los
 comercios disponibles para registrar avisos.
 
-El rol `administrador` administra cuentas pendientes de fundaciones y
-comercios. No puede registrar avisos ni gestionar aprobaciones de cuentas de
-otros roles.
+El rol `administrador` puede consultar y gestionar las cuentas por rol y
+estado, supervisar todas las donaciones y consultar su impacto. Puede aprobar o rechazar solicitudes
+de fundaciones y comercios, y activar o desactivar las demás cuentas no
+administradoras. También puede archivar y restaurar donaciones finalizadas,
+no completadas o vencidas sin asignar; el archivo conserva el historial y no
+se permite retirar donaciones que siguen en curso.
 
 La fundación puede gestionar únicamente cuentas de comercio desde
 `/home` → **Gestionar comercios**. La pantalla permite consultar su estado,
@@ -406,6 +409,14 @@ medida o estimada, quién la recibió, la fecha y hora y el total de personas
 beneficiadas. Estos datos se muestran en `/organizacion/recepcion/{id}` y solo
 se exponen a la organización asignada.
 
+`POST /api/v1/rescates/{id}/no-completado` permite únicamente a `fundacion`
+cerrar un rescate en estado `disponible` o `asignado`. Recibe un body
+`{"motivo":"..."}` con texto obligatorio (máximo 2000 caracteres); el cambio
+de estado, `motivo_no_completado` y el detalle del historial se escriben en la
+misma transacción. Devuelve `409` si el rescate ya está recogido o entregado y
+`404` si no existe. El detalle incluye el motivo solo para la fundación. En la
+pantalla de detalle, la fundación confirma la acción antes de enviarla.
+
 La organización receptora ve en el detalle los datos necesarios para revisar su
 recepción: alimento y cantidad de referencia; cuando ya se entregó, cantidad
 recibida, unidad, si fue medida o estimada, nombre de quien la recibió, fecha
@@ -425,6 +436,8 @@ Corresponde a lo implementado en `app/routers/`. Todas las rutas llevan el prefi
 | `GET /admin/usuarios` | `administrador` | También en `/admin/users` y `/auth/admin/usuarios` |
 | `GET /admin/cuentas-pendientes` | `administrador` | También en `/auth/admin/cuentas-pendientes` |
 | `POST /admin/usuarios/{id}/aprobar`, `/rechazar`, `/desactivar`, `/reactivar` | `administrador` | También bajo `/auth/admin/usuarios/{id}/` |
+| `GET /admin/rescates?archivado=false&estado=...` | `administrador` | Todas las donaciones o solo archivadas; permite filtrar por estado |
+| `POST /admin/rescates/{id}/archivar`, `/restaurar` | `administrador` | Solo archiva donaciones finalizadas o vencidas sin asignar; conserva el historial |
 | `GET /fundacion/comercios` | `fundacion` | Solo cuentas de comercio |
 | `POST /fundacion/comercios/{id}/aprobar`, `/desactivar`, `/reactivar` | `fundacion` | Solo cuentas de comercio |
 | `GET /comercios`, `/organizaciones`, `/voluntarios` | `fundacion` | Sin correos ni credenciales |
@@ -437,10 +450,14 @@ Corresponde a lo implementado en `app/routers/`. Todas las rutas llevan el prefi
 | `PATCH /rescates/{id}` | `comercio` | Aviso propio, `disponible` y sin vencer |
 | `POST /rescates/{id}/cancelar` | `comercio` | Aviso propio, `disponible` y sin vencer |
 | `PATCH /rescates/{id}/asignacion` | `fundacion` | Solo rescates `disponible` |
+| `PATCH /rescates/{id}/reasignacion` | `fundacion` | Rescate asignado; registra el motivo en el historial |
 | `POST /rescates/{id}/no-completado` | `fundacion` | Solo rescates `disponible` o `asignado` |
+| `POST /rescates/{id}/recogida` | `voluntario` | Solo el voluntario asignado |
 | `POST /rescates/{id}/entrega-voluntario` | `voluntario` | Solo el voluntario asignado |
+| `POST /rescates/{id}/entrega` | `organizacion` | Solo la organización destino, con el rescate `recogido` |
+| `PATCH /rescates/{id}/beneficiados` | `organizacion` | Solo la organización destino, con el rescate `entregado` |
 | `POST /rescates/{id}/recepcion` | `organizacion` | Solo la organización destino, con el rescate `recogido` |
-| `GET /impacto`, `/impacto/detalle` | `fundacion` | Indicadores y rescates entregados del periodo |
+| `GET /impacto`, `/impacto/detalle` | `administrador` | Indicadores y rescates entregados del periodo |
 
 `GET /api/v1/impacto?desde=AAAA-MM-DD&hasta=AAAA-MM-DD` calcula los
 indicadores de las fechas de calendario indicadas en la zona horaria de Colombia,
@@ -453,7 +470,7 @@ devuelve el total de la métrica y los rescates que lo respaldan. Los detalles
 incluyen fecha de entrega, comercio, organización, cantidad recibida, tipo de
 medición y beneficiarios. Para `organizaciones`, los rescates se agrupan por
 organización. Ambas rutas rechazan periodos invertidos con `422`. La pantalla
-de la fundación está en `/fundacion/impacto`; permite seleccionar cada
+de administración está en `/admin/impacto`; permite seleccionar cada
 indicador, revisar sus rescates, comprobar que el respaldo suma el total y
 abrir el historial de cada rescate.
 
@@ -480,7 +497,9 @@ La migración `0004` deja ese historial con la forma de #35: `historial_estados`
 `ocurrido_en`, `detalle`), de solo inserción: un `UPDATE` o `DELETE` sobre la tabla
 falla. El servicio para las transiciones de estado es `cambiar_estado()` de
 `app/services/transiciones.py`: hace el `UPDATE` condicional y la fila del
-historial en la misma transacción.
+historial en la misma transacción. La usan todas las transiciones (asignación,
+reasignación, cancelación, entrega y recepción). Las pruebas de estos criterios están
+en `tests/test_historial_estados.py`.
 
 `rescates.unidad_recibida` acepta `kg` o `aprox`. La migración `0006` la había cambiado a
 `aproximada`, y la `0008` la devolvió a `aprox`, que es lo que usan `POST /rescates/{id}/entrega`

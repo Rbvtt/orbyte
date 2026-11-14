@@ -5,10 +5,20 @@ import type {
   RescateEntrega,
   RescateHistorial,
   RescateLista,
+  RescateAdmin,
 } from "@/types/rescates";
 import { apiFetch } from "./client";
 
 export const rescatesApi = {
+  adminListado: (opciones: { archivado?: boolean; estado?: string } = {}) => {
+    const parametros = new URLSearchParams({ archivado: String(opciones.archivado ?? false) });
+    if (opciones.estado) parametros.set("estado", opciones.estado);
+    return apiFetch<RescateAdmin[]>(`/api/v1/admin/rescates?${parametros.toString()}`);
+  },
+  adminArchivar: (id: string) =>
+    apiFetch<RescateAdmin>(`/api/v1/admin/rescates/${id}/archivar`, { method: "POST" }),
+  adminRestaurar: (id: string) =>
+    apiFetch<RescateAdmin>(`/api/v1/admin/rescates/${id}/restaurar`, { method: "POST" }),
   /** GET /api/v1/rescates?estado=activos (#37): disponibles, asignados y recogidos. Solo fundación. */
   activos: (signal?: AbortSignal) => apiFetch<RescateLista[]>("/api/v1/rescates?estado=activos", { signal }),
   /** Rescates activos asignados al voluntario autenticado o a su organización. */
@@ -43,6 +53,11 @@ export const rescatesApi = {
       `/api/v1/rescates/${id}/asignacion`,
       { method: "PATCH", body: datos },
     ),
+  reasignar: (id: string, datos: { organizacion_id: string; voluntario_id: string; motivo: string }) =>
+    apiFetch<{ id: string; estado: string; organizacion_id: string; voluntario_id: string }>(
+      `/api/v1/rescates/${id}/reasignacion`,
+      { method: "PATCH", body: datos },
+    ),
   misAvisos: (signal?: AbortSignal) =>
     apiFetch<RescateAvisoComercio[]>("/api/v1/rescates/mis-avisos", { signal }),
   actualizarAviso: (
@@ -51,4 +66,10 @@ export const rescatesApi = {
   ) => apiFetch<RescateAvisoComercio>(`/api/v1/rescates/${id}`, { method: "PATCH", body: datos }),
   cancelarAviso: (id: string) =>
     apiFetch<RescateAvisoComercio>(`/api/v1/rescates/${id}/cancelar`, { method: "POST" }),
+  /** POST /api/v1/rescates/{id}/no-completado (#44). Solo fundación. */
+  noCompletado: (id: string, motivo: string) =>
+    apiFetch<{ id: string; estado: "no_completado"; motivo_no_completado: string }>(
+      `/api/v1/rescates/${id}/no-completado`,
+      { method: "POST", body: { motivo } },
+    ),
 };
