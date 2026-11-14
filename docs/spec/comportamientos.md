@@ -31,6 +31,20 @@ cambio en el historial.
 - **Entonces** el rescate queda en estado `disponible`
 - **Y** se conserva quién lo registró
 
+### CA-01.4 · Hora límite inválida *
+
+- **Dado** un aviso cuya hora_limite es igual o anterior al momento actual del servidor
+- **Cuando** se intenta registrar
+- **Entonces** el sistema no lo guarda
+- **Y** indica si la hora debe ser futura
+
+### CA-01.5 · Cantidad negativa o cero 
+
+- **Dado** un aviso con cantidad negativa o igual a cero
+- **Cuando** se intenta registrar
+- **Entonces** el sistema no lo guarda
+- **Y** indica que la cantidad debe ser mayor que cero
+
 ## CMP-02 · La fundación asigna el rescate a una organización receptora y a un voluntario
 
 **Origen:** RF-004 · RF-007 · RF-008 · RF-010
